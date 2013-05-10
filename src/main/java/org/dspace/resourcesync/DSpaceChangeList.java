@@ -39,7 +39,7 @@ public class DSpaceChangeList extends DSpaceResourceDocument
         this.includeRestricted = includeRestricted;
     }
 
-    public void generate(Context context, OutputStream out, Date from, Date to, String capabilityList)
+    public void generate(Context context, OutputStream out, Date from, Date to, String capabilityList, String changeListArchive)
             throws SQLException, ParseException, IOException
     {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
@@ -59,6 +59,10 @@ public class DSpaceChangeList extends DSpaceResourceDocument
                                             offset, limit, getItems, getCollections, getWithdrawn, getRestricted);
 
         ChangeList cl = new ChangeList(capabilityList);
+        if (changeListArchive != null)
+        {
+            cl.inChangeListArchive(changeListArchive);
+        }
         for (HarvestedItemInfo hi : his)
         {
             Item item = hi.item;

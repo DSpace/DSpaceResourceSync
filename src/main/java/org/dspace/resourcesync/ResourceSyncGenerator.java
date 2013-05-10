@@ -7,7 +7,6 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
 import org.dspace.core.ConfigurationManager;
 import org.dspace.core.Context;
-import org.openarchives.resourcesync.CapabilityList;
 import org.openarchives.resourcesync.ChangeListArchive;
 
 import java.io.File;
@@ -19,7 +18,6 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class ResourceSyncGenerator
@@ -208,9 +206,12 @@ public class ResourceSyncGenerator
         String clFile = outdir + File.separator + filename;
         FileOutputStream fos = new FileOutputStream(new File(clFile));
 
+        // get the url of the master changelist
+        String claUrl = this.getChangeListUrl("changelistarchive.xml");
+
         // generate the changelist for the period
         DSpaceChangeList dcl = new DSpaceChangeList();
-        dcl.generate(context, fos, from, to, clUrl);
+        dcl.generate(context, fos, from, to, clUrl, claUrl);
         fos.close();
 
         return filename;
@@ -228,9 +229,12 @@ public class ResourceSyncGenerator
         String clFile = outdir + File.separator + filename;
         FileOutputStream fos = new FileOutputStream(new File(clFile));
 
+        // get the url of the master changelist
+        String claUrl = this.getChangeListUrl("changelistarchive.xml");
+
         // generate the changelist for the period
         DSpaceChangeList dcl = new DSpaceChangeList();
-        dcl.generate(context, fos, from, to, clUrl);
+        dcl.generate(context, fos, from, to, clUrl, claUrl);
         fos.close();
 
         return filename;
