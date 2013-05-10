@@ -7,14 +7,20 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
 import org.dspace.core.ConfigurationManager;
 import org.dspace.core.Context;
+import org.openarchives.resourcesync.CapabilityList;
+import org.openarchives.resourcesync.ChangeListArchive;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class ResourceSyncGenerator
 {
@@ -48,7 +54,7 @@ public class ResourceSyncGenerator
             else
             {
                 HelpFormatter hf = new HelpFormatter();
-                hf.printHelp("ResourceSyncGenerator", "Manager ResourceSync documents for DSpace", options, "");
+                hf.printHelp("ResourceSyncGenerator", "Manage ResourceSync documents for DSpace", options, "");
             }
         }
         finally
@@ -89,10 +95,11 @@ public class ResourceSyncGenerator
         String clFilename = this.generateLatestChangeList(context, outdir, clUrl);
 
         // add to the change list archive
-        // TODO
+        this.addChangeListToArchive(context, outdir, clFilename, clUrl);
 
-        // update the last modified date in the capability list
-        // TODO
+        // update the last modified date in the capability list (and add the
+        // changelistarchive if necessary)
+        this.updateCapabilityList(context, outdir);
     }
 
     public void rebase(Context context)
@@ -110,10 +117,11 @@ public class ResourceSyncGenerator
         String clFilename = this.generateLatestChangeList(context, outdir, clUrl);
 
         // add to the change list archive
-        // TODO
+        this.addChangeListToArchive(context, outdir, clFilename, clUrl);
 
-        // update the last modified dates in the capability list
-        // TODO
+        // update the last modified date in the capability list (and add the
+        // changelistarchive if necessary)
+        this.updateCapabilityList(context, outdir);
     }
 
     private String ensureDirectory()
@@ -178,7 +186,9 @@ public class ResourceSyncGenerator
             {
                 if (f.getName().startsWith("changelist_"))
                 {
-                    String dr = f.getName().substring("changelist_".length(), ".xml".length());
+                    int start = "changelist_".length(); // 11
+                    int end = f.getName().length() - ".xml".length();
+                    String dr = f.getName().substring(start, end);
                     Date possibleFrom = sdf.parse(dr);
                     if (possibleFrom.getTime() > from.getTime())
                     {
@@ -226,6 +236,15 @@ public class ResourceSyncGenerator
         return filename;
     }
 
+    private void updateCapabilityList(Context context, String outdir)
+            throws IOException
+    {
+        // just regenerate the capability list in its entirity
+        String rlFilename = "resourcelist.xml";
+        String claFilename = "changelistarchive.xml";
+        this.generateCapabilityList(context, outdir, rlFilename, claFilename);
+    }
+
     private void generateCapabilityList(Context context, String outdir, String rlFilename, String claFilename)
             throws IOException
     {
@@ -243,6 +262,7 @@ public class ResourceSyncGenerator
 
         DSpaceCapabilityList dcl = new DSpaceCapabilityList();
         dcl.generate(context, fos, describedBy, rlUrl, claUrl);
+        fos.close();
     }
 
     private String getResourceListUrl(String filename)
@@ -256,4 +276,60 @@ public class ResourceSyncGenerator
         String base = ConfigurationManager.getProperty("resourcesync", "base-url");
         return base + "/" + filename;
     }
+
+    private String getChangeListUrl(String filename)
+    {
+        String base = ConfigurationManager.getProperty("resourcesync", "base-url");
+        return base + "/" + filename;
+    }
+
+    private void addChangeListToArchive(Context context, String outdir, String filename, String clUrl)
+            throws IOException, ParseException
+    {
+        // get a handle on the change list archive file
+        String claPath = outdir + File.separator + "changelistarchive.xml";
+        File claFile = new File(claPath);
+
+        // get the URL of the new changelist
+        String loc = this.getChangeListUrl(filename);
+
+        // get the date of the new changelist (it is encoded in the filename)
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+        int start = "changelist_".length();
+        int end = filename.length() - ".xml".length();
+        String dr = filename.substring(start, end);
+        Date date = sdf.parse(dr);
+
+        // create a single element map of the changelist and its last modified
+        // date for addition to the change list archive
+        Map<String, Date> changeLists = new HashMap<String, Date>();
+        changeLists.put(loc, date);
+
+        DSpaceChangeListArchive dcla = new DSpaceChangeListArchive();
+        ChangeListArchive cla = null;
+
+        // if the change list archive exists and is a file, we need to
+        // read it in as a change list
+        if (claFile.exists() && claFile.isFile())
+        {
+            // read the ChangeListArchive
+            FileInputStream fis = new FileInputStream(claFile);
+            cla = dcla.parse(fis);
+            fis.close();
+
+            // now serialise the new change lists
+            FileOutputStream fos = new FileOutputStream(claFile);
+            dcla.generate(context, fos, changeLists, clUrl, cla);
+            fos.close();
+        }
+        // if the change list archive does not exist create a new one with
+        // our one new changelist in it
+        else
+        {
+            FileOutputStream fos = new FileOutputStream(claFile);
+            dcla.generate(context, fos, changeLists, clUrl);
+            fos.close();
+        }
+    }
+
 }
