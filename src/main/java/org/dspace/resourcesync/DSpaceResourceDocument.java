@@ -19,22 +19,19 @@ import java.util.Map;
 public class DSpaceResourceDocument
 {
     protected List<String> exposeBundles = null;
-    protected List<String> mdFormats = null;
-    protected Map<String, String> formatType = null;
+    protected List<MetadataFormat> mdFormats = null;
 
     public DSpaceResourceDocument()
     {
         // get all the configuration
         this.exposeBundles = this.getBundlesToExpose();
         this.mdFormats = this.getMetadataFormats();
-        this.formatType = this.getFormatTypes();
     }
 
-    public DSpaceResourceDocument(List<String> exposeBundles, List<String> mdFormats, Map<String, String> formatType)
+    public DSpaceResourceDocument(List<String> exposeBundles, List<MetadataFormat> mdFormats)
     {
         this.exposeBundles = exposeBundles;
         this.mdFormats = mdFormats;
-        this.formatType = formatType;
     }
 
     protected void addResources(Item item, ResourceSyncDocument rl)
@@ -64,7 +61,7 @@ public class DSpaceResourceDocument
         }
 
         // add all the relevant metadata formats
-        for (String format : this.mdFormats)
+        for (MetadataFormat format : this.mdFormats)
         {
             this.addMetadata(item, format, exposed, clist, rl);
         }
@@ -79,7 +76,7 @@ public class DSpaceResourceDocument
         bs.setType(bitstream.getFormat().getMIMEType());
         bs.setLength(bitstream.getSize());
 
-        for (String format : this.mdFormats)
+        for (MetadataFormat format : this.mdFormats)
         {
             bs.addLn(ResourceSync.REL_DESCRIBED_BY, this.getMetadataUrl(item, format));
         }
@@ -93,22 +90,21 @@ public class DSpaceResourceDocument
         return bs;
     }
 
-    protected URL addMetadata(Item item, String format, List<Bitstream> describes, List<Collection> collections, ResourceSyncDocument rl)
+    protected URL addMetadata(Item item, MetadataFormat format, List<Bitstream> describes, List<Collection> collections, ResourceSyncDocument rl)
     {
         URL metadata = new URL();
 
         // set the metadata url
         metadata.setLoc(this.getMetadataUrl(item, format));
-        metadata.addLn(ResourceSync.REL_DESCRIBED_BY, format);
+        metadata.addLn(ResourceSync.REL_DESCRIBED_BY, format.getNamespace());
 
         // technically this only tells us when the item was last updated, not the metadata
         metadata.setLastModified(item.getLastModified());
 
         // set the type
-        String type = this.formatType.get(format);
-        if (type != null && !"".equals(type))
+        if (format.getMimetype() != null)
         {
-            metadata.setType(type);
+            metadata.setType(format.getMimetype());
         }
 
         for (Bitstream bs : describes)
@@ -145,39 +141,58 @@ public class DSpaceResourceDocument
         return exposeBundles;
     }
 
-    protected List<String> getMetadataFormats()
+    protected List<MetadataFormat> getMetadataFormats()
     {
-        List<String> formats = new ArrayList<String>();
-        String cfg = ConfigurationManager.getProperty("resourcesync", "metadata.formats");
-        if (cfg == null || "".equals(cfg))
+        List<MetadataFormat> formats = new ArrayList<MetadataFormat>();
+
+        // load our config options
+        String formatCfg = ConfigurationManager.getProperty("resourcesync", "metadata.formats");
+        String typeCfg = ConfigurationManager.getProperty("resourcesync", "metadata.types");
+
+        // if there's no format config, there are no formats, irrespective of what
+        // the type config says
+        if (formatCfg == null || "".equals(formatCfg))
         {
             return formats;
         }
 
-        String[] bits = cfg.split(",");
-        for (String format : bits)
+        // get the pairs from the config options
+        Map<String, String> formatPairs = this.getPairs(formatCfg);
+        Map<String, String> typePairs = this.getPairs(typeCfg);
+
+        for (String prefix : formatPairs.keySet())
         {
-            if (!formats.contains(format))
-            {
-                formats.add(format);
-            }
+            MetadataFormat mf = new MetadataFormat(prefix, formatPairs.get(prefix), typePairs.get(prefix));
+            formats.add(mf);
         }
+
         return formats;
     }
 
-    protected Map<String, String> getFormatTypes()
+    private Map<String, String> getPairs(String cfg)
     {
-        Map<String, String> formatTypes = new HashMap<String, String>();
-        for (String format : this.mdFormats)
+        Map<String, String> pairs = new HashMap<String, String>();
+
+        if (cfg == null)
         {
-            String cfg = ConfigurationManager.getProperty("resourcesync", "metadata.type." + format);
-            if (cfg == null || "".equals(cfg))
+            return pairs;
+        }
+
+        // first split the config by comma
+        String[] bits = cfg.split(",");
+
+        for (String bit : bits)
+        {
+            // now split around the = sign
+            String[] pair = bit.split("=");
+            if (pair.length != 2)
             {
                 continue;
             }
-            formatTypes.put(format, cfg.trim());
+            pairs.put(pair[0].trim(), pair[1].trim());
         }
-        return formatTypes;
+
+        return pairs;
     }
 
     protected String getMetadataChangeFreq()
@@ -200,11 +215,11 @@ public class DSpaceResourceDocument
         return cf;
     }
 
-    protected String getMetadataUrl(Item item, String format)
+    protected String getMetadataUrl(Item item, MetadataFormat format)
     {
         String baseUrl = ConfigurationManager.getProperty("resourcesync", "base-url");
         String handle = item.getHandle();
-        String url = baseUrl + "/" + handle + "?format=" + format;
+        String url = baseUrl + "/resource/" + handle + "/" + format.getPrefix();
         return url;
     }
 

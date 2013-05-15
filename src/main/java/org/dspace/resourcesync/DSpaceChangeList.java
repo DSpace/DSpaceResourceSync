@@ -32,10 +32,9 @@ public class DSpaceChangeList extends DSpaceResourceDocument
         this.includeRestricted = ConfigurationManager.getBooleanProperty("resourcesync", "changelist.include-restricted");
     }
 
-    public DSpaceChangeList(List<String> exposeBundles, List<String> mdFormats, Map<String, String> formatType,
-                            boolean includeRestricted)
+    public DSpaceChangeList(List<String> exposeBundles, List<MetadataFormat> mdFormats, boolean includeRestricted)
     {
-        super(exposeBundles, mdFormats, formatType);
+        super(exposeBundles, mdFormats);
         this.includeRestricted = includeRestricted;
     }
 
@@ -92,7 +91,7 @@ public class DSpaceChangeList extends DSpaceResourceDocument
     }
 
     @Override
-    protected URL addMetadata(Item item, String format, List<Bitstream> describes, List<Collection> collections, ResourceSyncDocument rl)
+    protected URL addMetadata(Item item, MetadataFormat format, List<Bitstream> describes, List<Collection> collections, ResourceSyncDocument rl)
     {
         URL url = super.addMetadata(item, format, describes, collections, rl);
         String change = ResourceSync.CHANGE_UPDATED;

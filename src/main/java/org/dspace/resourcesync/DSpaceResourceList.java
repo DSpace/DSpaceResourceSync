@@ -28,10 +28,10 @@ public class DSpaceResourceList extends DSpaceResourceDocument
         this.bitstreamChangeFreq = this.getBitstreamChangeFreq();
     }
 
-    public DSpaceResourceList(List<String> exposeBundles, List<String> mdFormats, Map<String, String> formatType,
+    public DSpaceResourceList(List<String> exposeBundles, List<MetadataFormat> mdFormats,
                                 String mdChangeFreq, String bitstreamChangeFreq)
     {
-        super(exposeBundles, mdFormats, formatType);
+        super(exposeBundles, mdFormats);
         this.metadataChangeFreq = mdChangeFreq;
         this.bitstreamChangeFreq = bitstreamChangeFreq;
     }
@@ -62,7 +62,7 @@ public class DSpaceResourceList extends DSpaceResourceDocument
     }
 
     @Override
-    protected URL addMetadata(Item item, String format, List<Bitstream> describes, List<Collection> collections, ResourceSyncDocument rl)
+    protected URL addMetadata(Item item, MetadataFormat format, List<Bitstream> describes, List<Collection> collections, ResourceSyncDocument rl)
     {
         URL url = super.addMetadata(item, format, describes, collections, rl);
         if (this.metadataChangeFreq != null)
