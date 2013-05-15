@@ -169,6 +169,19 @@ public class DSpaceResourceDocument
         return formats;
     }
 
+    public MetadataFormat getMetadataFormat(String prefix)
+    {
+        List<MetadataFormat> formats = this.getMetadataFormats();
+        for (MetadataFormat format : formats)
+        {
+            if (format.getPrefix().equals(prefix))
+            {
+                return format;
+            }
+        }
+        return null;
+    }
+
     private Map<String, String> getPairs(String cfg)
     {
         Map<String, String> pairs = new HashMap<String, String>();
