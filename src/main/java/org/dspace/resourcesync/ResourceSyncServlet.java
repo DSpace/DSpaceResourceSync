@@ -104,7 +104,8 @@ public class ResourceSyncServlet extends HttpServlet
         }
         catch (AuthorizeException e)
         {
-            throw new ServletException(e);
+            // if we can't access the resource, then pretend that it doesn't exist
+            resp.sendError(404);
         }
         finally
         {

@@ -127,6 +127,10 @@ public class ResourceSyncGenerator
     {
         // make sure our output directory exists
         String outdir = ConfigurationManager.getProperty("resourcesync", "resourcesync.dir");
+        if (outdir == null)
+        {
+            throw new IOException("No configuration for resourcesync.dir");
+        }
         File od = new File(outdir);
         if (!od.exists())
         {

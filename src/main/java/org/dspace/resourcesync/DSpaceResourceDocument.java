@@ -72,9 +72,10 @@ public class DSpaceResourceDocument
         URL bs = new URL();
 
         bs.setLoc(this.getBitstreamUrl(item, bitstream));
-        // bs.setLastModified(); // last modified date is not available
+        bs.setLastModified(item.getLastModified()); // last modified date is not available on a bitstream, so we use the item one
         bs.setType(bitstream.getFormat().getMIMEType());
         bs.setLength(bitstream.getSize());
+        bs.addHash(bitstream.getChecksumAlgorithm().toLowerCase(), bitstream.getChecksum()); // FIXME: do we need to base64 encode this?
 
         for (MetadataFormat format : this.mdFormats)
         {
