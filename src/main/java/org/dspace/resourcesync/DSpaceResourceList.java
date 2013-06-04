@@ -39,7 +39,13 @@ public class DSpaceResourceList extends DSpaceResourceDocument
     public void generate(Context context, OutputStream out, String capabilityList)
             throws SQLException, IOException
     {
-        ResourceList rl = new ResourceList(capabilityList);
+        this.generate(context, out, capabilityList, false);
+    }
+
+    public void generate(Context context, OutputStream out, String capabilityList, boolean dump)
+            throws SQLException, IOException
+    {
+        ResourceList rl = new ResourceList(capabilityList, dump);
 
         ItemIterator allItems = Item.findAll(context);
 

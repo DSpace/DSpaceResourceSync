@@ -8,7 +8,7 @@ import java.io.OutputStream;
 
 public class DSpaceCapabilityList
 {
-    public void generate(Context context, OutputStream out, String describedBy, String resourceList, String changeListArchive)
+    public void generate(Context context, OutputStream out, String describedBy, String resourceList, String changeListArchive, String resourceDump)
             throws IOException
     {
         CapabilityList cl = new CapabilityList(describedBy, null);
@@ -19,6 +19,10 @@ public class DSpaceCapabilityList
         if (changeListArchive != null)
         {
             cl.setChangeList(changeListArchive);
+        }
+        if (resourceDump != null)
+        {
+            cl.setResourceDump(resourceDump);
         }
         cl.serialise(out);
     }

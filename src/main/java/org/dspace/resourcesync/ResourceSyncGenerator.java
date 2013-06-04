@@ -74,8 +74,15 @@ public class ResourceSyncGenerator
         // generate the resource list
         String rlFilename = this.generateResourceList(context, outdir, clUrl);
 
+        // should be generate a resource dump?
+        String rdFilename = null;
+        if (ConfigurationManager.getBooleanProperty("resourcesync", "resourcedump.enable"))
+        {
+            rdFilename = this.generateResourceDump(context, outdir, clUrl);
+        }
+
         // generate the capability list (without a change list)
-        this.generateCapabilityList(context, outdir, rlFilename, null);
+        this.generateCapabilityList(context, outdir, rlFilename, null, rdFilename);
 
         // generate the blank changelist
         this.generateBlankChangeList(context, outdir, clUrl);
@@ -111,6 +118,13 @@ public class ResourceSyncGenerator
         // generate the resource list
         String rlFilename = this.generateResourceList(context, outdir, clUrl);
 
+        // should be generate a resource dump?
+        String rdFilename = null;
+        if (ConfigurationManager.getBooleanProperty("resourcesync", "resourcedump.enable"))
+        {
+            rdFilename = this.generateResourceDump(context, outdir, clUrl);
+        }
+
         // generate the latest changelist
         String clFilename = this.generateLatestChangeList(context, outdir, clUrl);
 
@@ -131,16 +145,22 @@ public class ResourceSyncGenerator
         {
             throw new IOException("No configuration for resourcesync.dir");
         }
-        File od = new File(outdir);
+        this.ensureDirectory(outdir);
+        return outdir;
+    }
+
+    private void ensureDirectory(String dir)
+            throws IOException
+    {
+        File od = new File(dir);
         if (!od.exists())
         {
             od.mkdir();
         }
         if (!od.isDirectory())
         {
-            throw new IOException(outdir + " exists, but is not a directory");
+            throw new IOException(dir + " exists, but is not a directory");
         }
-        return outdir;
     }
 
     private void emptyDirectory(String outdir)
@@ -172,6 +192,21 @@ public class ResourceSyncGenerator
         drl.generate(context, fos, clUrl);
         fos.close();
         return "resourcelist.xml";
+    }
+
+    private String generateResourceDump(Context context, String outdir, String clUrl)
+            throws IOException, SQLException
+    {
+        this.ensureDirectory(outdir);
+        File oldRd = new File(outdir + File.separator + "resourcedump.zip");
+        if (oldRd.exists())
+        {
+            oldRd.delete();
+        }
+
+        DSpaceResourceDump drd = new DSpaceResourceDump();
+        drd.generate(context, outdir, clUrl);
+        return "resourcedump.zip";
     }
 
     private String generateLatestChangeList(Context context, String outdir, String clUrl)
@@ -250,10 +285,15 @@ public class ResourceSyncGenerator
         // just regenerate the capability list in its entirity
         String rlFilename = "resourcelist.xml";
         String claFilename = "changelistarchive.xml";
-        this.generateCapabilityList(context, outdir, rlFilename, claFilename);
+        String rdFilename = null;
+        if (ConfigurationManager.getBooleanProperty("resourcesync", "resourcedump.enable"))
+        {
+            rdFilename = "resourcedump.zip";
+        }
+        this.generateCapabilityList(context, outdir, rlFilename, claFilename, rdFilename);
     }
 
-    private void generateCapabilityList(Context context, String outdir, String rlFilename, String claFilename)
+    private void generateCapabilityList(Context context, String outdir, String rlFilename, String claFilename, String rdFilename)
             throws IOException
     {
         String describedBy = ConfigurationManager.getProperty("resourcesync", "capabilitylist.described-by");
@@ -267,9 +307,10 @@ public class ResourceSyncGenerator
 
         String rlUrl = rlFilename == null ? null : this.getResourceListUrl(rlFilename);
         String claUrl = claFilename == null ? null : this.getChangeListArchiveUrl(claFilename);
+        String rdUrl = rdFilename == null ?  null : this.getResourceDumpUrl(rdFilename);
 
         DSpaceCapabilityList dcl = new DSpaceCapabilityList();
-        dcl.generate(context, fos, describedBy, rlUrl, claUrl);
+        dcl.generate(context, fos, describedBy, rlUrl, claUrl, rdUrl);
         fos.close();
     }
 
@@ -286,6 +327,12 @@ public class ResourceSyncGenerator
     }
 
     private String getChangeListUrl(String filename)
+    {
+        String base = ConfigurationManager.getProperty("resourcesync", "base-url");
+        return base + "/" + filename;
+    }
+
+    private String getResourceDumpUrl(String filename)
     {
         String base = ConfigurationManager.getProperty("resourcesync", "base-url");
         return base + "/" + filename;
