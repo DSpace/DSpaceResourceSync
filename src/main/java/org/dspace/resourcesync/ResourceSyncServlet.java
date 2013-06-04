@@ -140,7 +140,14 @@ public class ResourceSyncServlet extends HttpServlet
             return;
         }
 
-        resp.setContentType("application/xml");
+        if (document.endsWith(".xml"))
+        {
+            resp.setContentType("application/xml");
+        }
+        else if (document.endsWith(".zip"))
+        {
+            resp.setContentType("application/zip");
+        }
 
         InputStream is = new FileInputStream(f);
         OutputStream os = resp.getOutputStream();
