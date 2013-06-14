@@ -57,7 +57,7 @@ public class DSpaceChangeList extends DSpaceResourceDocument
         List<HarvestedItemInfo> his = Harvest.harvest(context, scope, fromDate, toDate,
                                             offset, limit, getItems, getCollections, getWithdrawn, getRestricted);
 
-        ChangeList cl = new ChangeList(capabilityList);
+        ChangeList cl = new ChangeList(from, to, capabilityList);
         if (changeListArchive != null)
         {
             cl.inChangeListArchive(changeListArchive);
@@ -68,8 +68,6 @@ public class DSpaceChangeList extends DSpaceResourceDocument
             this.addResources(item, cl);
         }
 
-        // FIXME: what is the real date for a changelist, is it today or the "to" date
-        cl.setLastModified(new Date());
         cl.serialise(out);
     }
 

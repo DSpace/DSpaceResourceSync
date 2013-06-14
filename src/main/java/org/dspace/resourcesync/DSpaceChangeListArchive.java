@@ -16,7 +16,7 @@ public class DSpaceChangeListArchive
     {
         if (cla == null)
         {
-            cla = new ChangeListArchive(null, capabilityList);
+            cla = new ChangeListArchive(capabilityList);
         }
 
         for (String loc : changeLists.keySet())
