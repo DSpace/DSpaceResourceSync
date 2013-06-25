@@ -5,6 +5,7 @@ import org.dspace.content.Bitstream;
 import org.dspace.content.Collection;
 import org.dspace.content.Item;
 import org.dspace.core.Context;
+import org.openarchives.resourcesync.ResourceDump;
 import org.openarchives.resourcesync.ResourceSyncDocument;
 import org.openarchives.resourcesync.URL;
 
@@ -16,6 +17,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.sql.SQLException;
+import java.util.Date;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -40,14 +42,31 @@ public class DSpaceResourceDump extends DSpaceResourceDocument
         this.bitstreamChangeFreq = bitstreamChangeFreq;
     }
 
-    public void generate(Context context, String rdDir, String clUrl)
+    public void generate(Context context, String rdDir, String rsDesc)
             throws IOException, SQLException
     {
+        // this generates the zip file
         String drlFile = rdDir + File.separator + "manifest.xml";
         FileOutputStream fos = new FileOutputStream(new File(drlFile));
         DSpaceResourceList drl = new DSpaceResourceListManifest(rdDir);
-        drl.generate(context, fos, clUrl);
+        drl.generate(context, fos, rsDesc);
         fos.close();
+
+        // now generate the dump file for the resourcesync framework
+        UrlManager um = new UrlManager();
+        ResourceDump rd = new ResourceDump(new Date(), rsDesc);
+        rd.addResourceZip(um.resourceDumpZip(), new Date(), "application/zip", this.getDumpSize(rdDir));
+        String rdFile = rdDir + File.separator + FileNames.resourceDump;
+        FileOutputStream fos2 = new FileOutputStream(new File(rdFile));
+        rd.serialise(fos2);
+        fos2.close();
+    }
+
+    private long getDumpSize(String dir)
+    {
+        String path = dir + File.separator + FileNames.resourceDumpZip;
+        File file = new File(path);
+        return file.length();
     }
 
     private class DSpaceResourceListManifest extends DSpaceResourceList

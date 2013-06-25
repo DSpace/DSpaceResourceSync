@@ -95,7 +95,7 @@ public class ResourceSyncGenerator
         }
 
         // generate the capability list (with a resource list, without a change list, and maybe with a resource dump)
-        this.generateCapabilityList(context, true, false, rd);
+        this.generateCapabilityList(context, true, false, rd, false);
 
         // generate the blank changelist as a placeholder for the next iteration
         this.generateBlankChangeList(context);
@@ -239,10 +239,37 @@ public class ResourceSyncGenerator
     private void generateResourceDump(Context context)
             throws IOException, SQLException
     {
+        this.deleteFile(FileNames.resourceDump);
         this.deleteFile(FileNames.resourceDumpZip);
 
         DSpaceResourceDump drd = new DSpaceResourceDump();
-        drd.generate(context, ConfigurationManager.getProperty("resourcesync", "resourcesync.dir"), this.um.capabilityList());
+        drd.generate(context, ConfigurationManager.getProperty("resourcesync", "resourcesync.dir"), this.um.resourceSyncDescription());
+    }
+
+    private String getLastChangeListName()
+            throws ParseException
+    {
+        String filename = null;
+        Date from = new Date(0);
+        File dir = new File(ConfigurationManager.getProperty("resourcesync", "resourcesync.dir"));
+        File[] files = dir.listFiles();
+        if (files != null)
+        {
+            for (File f : dir.listFiles())
+            {
+                if (FileNames.isChangeList(f))
+                {
+                    String dr = FileNames.changeListDate(f);
+                    Date possibleFrom = this.sdf.parse(dr);
+                    if (possibleFrom.getTime() > from.getTime())
+                    {
+                        from = possibleFrom;
+                        filename = f.getName();
+                    }
+                }
+            }
+        }
+        return filename;
     }
 
     private Date getLastChangeListDate()
@@ -308,7 +335,7 @@ public class ResourceSyncGenerator
     }
 
     private void updateCapabilityList(Context context)
-            throws IOException
+            throws IOException, ParseException
     {
         // just regenerate the capability list in its entirity
         boolean rd = false;
@@ -316,11 +343,11 @@ public class ResourceSyncGenerator
         {
             rd = true;
         }
-        this.generateCapabilityList(context, true, true, rd);
+        this.generateCapabilityList(context, true, true, rd, true);
     }
 
-    private void generateCapabilityList(Context context, boolean resourceList, boolean changeListArchive, boolean resourceDump)
-            throws IOException
+    private void generateCapabilityList(Context context, boolean resourceList, boolean changeListArchive, boolean resourceDump, boolean changeList)
+            throws IOException, ParseException
     {
         String describedBy = ConfigurationManager.getProperty("resourcesync", "capabilitylist.described-by");
         if ("".equals(describedBy))
@@ -335,8 +362,16 @@ public class ResourceSyncGenerator
         String rdUrl = resourceDump ? this.um.resourceDump() : null;
         String rsdUrl = this.um.resourceSyncDescription();
 
+        // get the latest change list
+        String changeListUrl = null;
+        if (changeList)
+        {
+            String clFilename = this.getLastChangeListName();
+            changeListUrl = this.um.changeList(clFilename);
+        }
+
         DSpaceCapabilityList dcl = new DSpaceCapabilityList();
-        dcl.generate(context, fos, describedBy, rlUrl, claUrl, rdUrl, rsdUrl);
+        dcl.generate(context, fos, describedBy, rlUrl, claUrl, rdUrl, rsdUrl, changeListUrl);
         fos.close();
     }
 

@@ -9,7 +9,9 @@ import java.io.OutputStream;
 
 public class DSpaceCapabilityList
 {
-    public void generate(Context context, OutputStream out, String describedBy, String resourceList, String changeListArchive, String resourceDump, String resourceSyncDescription)
+    public void generate(Context context, OutputStream out, String describedBy,
+                         String resourceList, String changeListArchive, String resourceDump,
+                         String resourceSyncDescription, String changeList)
             throws IOException
     {
         CapabilityList cl = new CapabilityList(describedBy, null);
@@ -19,7 +21,7 @@ public class DSpaceCapabilityList
         }
         if (changeListArchive != null)
         {
-            cl.setChangeList(changeListArchive);
+            cl.setChangeListArchive(changeListArchive);
         }
         if (resourceDump != null)
         {
@@ -28,6 +30,10 @@ public class DSpaceCapabilityList
         if (resourceSyncDescription != null)
         {
             cl.addLn(ResourceSync.REL_RESOURCESYNC, resourceSyncDescription);
+        }
+        if (changeList != null)
+        {
+            cl.setChangeList(changeList);
         }
         cl.serialise(out);
     }

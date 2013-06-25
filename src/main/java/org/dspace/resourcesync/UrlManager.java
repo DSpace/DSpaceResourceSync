@@ -42,6 +42,11 @@ public class UrlManager
 
     public String resourceDump()
     {
+        return this.base + FileNames.resourceDump;
+    }
+
+    public String resourceDumpZip()
+    {
         return this.base + FileNames.resourceDumpZip;
     }
 }

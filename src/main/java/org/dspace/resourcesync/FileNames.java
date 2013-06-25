@@ -7,6 +7,7 @@ public class FileNames
     public static String resourceSyncDocument = "resourcesync.xml";
     public static String resourceList = "resourcelist.xml";
     public static String resourceDumpZip = "resourcedump.zip";
+    public static String resourceDump = "resourcedump.xml";
     public static String capabilityList = "capabilitylist.xml";
     public static String changeListArchive = "changelistarchive.xml";
 
