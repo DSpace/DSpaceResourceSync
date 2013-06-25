@@ -72,6 +72,12 @@ public class ResourceSyncServlet extends HttpServlet
 
             // get the DSpace object that we want to expose
             DSpaceObject dso = HandleManager.resolveToObject(context, handle);
+            if (dso == null)
+            {
+                // no such object, send 404
+                resp.sendError(404);
+                return;
+            }
 
             // if we're not given an item, we can't crosswalk it
             if (dso.getType() != Constants.ITEM)

@@ -2,6 +2,13 @@
 
 This module provides ResourceSync capabilities for DSpace, supporting the metadata harvesting use case.
 
+##Dependencies
+
+This module depends on a generic ResourceSync Java library, which you will need to install before you can
+build the code
+
+    https://github.com/CottageLabs/ResourceSyncJava
+
 ##Installation
 
 The software can be compiled with simply
@@ -19,7 +26,7 @@ and then update your dspace pom.xml file to depend on this module, with a depend
     <dependency>
         <groupId>org.dspace</groupId>
         <artifactId>dspace-resourcesync</artifactId>
-        <version>0.6</version>
+        <version>1.0-SNAPSHOT</version>
         <type>jar</type>
         <classifier>classes</classifier>
     </dependency>
