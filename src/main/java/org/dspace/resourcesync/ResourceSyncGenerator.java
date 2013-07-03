@@ -21,7 +21,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-// FIXME: this whole codebase is a total total mess, and needs to be rewritten from scratch
+// FIXME: this whole codebase is a total total mess, and needs to be rewritten
 
 public class ResourceSyncGenerator
 {
@@ -35,22 +35,22 @@ public class ResourceSyncGenerator
         CommandLineParser parser = new PosixParser();
         CommandLine cmd = parser.parse( options, args);
 
-        ResourceSyncGenerator rsg = new ResourceSyncGenerator();
         Context context = new Context();
+        ResourceSyncGenerator rsg = new ResourceSyncGenerator(context);
 
         try
         {
             if (cmd.hasOption("i"))
             {
-                rsg.init(context);
+                rsg.init();
             }
             else if (cmd.hasOption("u"))
             {
-                rsg.update(context);
+                rsg.update();
             }
             else if (cmd.hasOption("r"))
             {
-                rsg.rebase(context);
+                rsg.rebase();
             }
             else
             {
@@ -66,95 +66,105 @@ public class ResourceSyncGenerator
 
     private UrlManager um;
     private SimpleDateFormat sdf;
+    private Context context;
+    private boolean resourceDump = false;
+    private String outdir;
 
-    public ResourceSyncGenerator()
+    public ResourceSyncGenerator(Context context)
+            throws IOException
     {
         this.um = new UrlManager();
         this.sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
-    }
-
-    public void init(Context context)
-            throws IOException, SQLException, ParseException
-    {
-        // make sure that the directory exists, and that it is empty
-        String outdir = this.ensureDirectory();
-        this.emptyDirectory(outdir);
-
-        // generate the description document (which will point to the not-yet-existent capability list)
-        this.generateResourceSyncDescription(context);
-
-        // generate the resource list
-        this.generateResourceList(context);
-
-        // should we generate a resource dump?
-        boolean rd = false;
-        if (ConfigurationManager.getBooleanProperty("resourcesync", "resourcedump.enable"))
-        {
-            this.generateResourceDump(context);
-            rd = true;
-        }
-
-        // generate the capability list (with a resource list, without a change list, and maybe with a resource dump)
-        this.generateCapabilityList(context, true, false, rd, false);
-
-        // generate the blank changelist as a placeholder for the next iteration
-        this.generateBlankChangeList(context);
-    }
-
-    public void update(Context context)
-            throws IOException, SQLException, ParseException
-    {
-        String outdir = this.ensureDirectory();
-
-        // generate the latest changelist
-        String clFilename = this.generateLatestChangeList(context);
-
-        // add to the change list archive
-        this.addChangeListToArchive(context, clFilename);
-
-        // update the last modified date in the capability list (and add the
-        // changelistarchive if necessary)
-        this.updateCapabilityList(context);
-    }
-
-    public void rebase(Context context)
-            throws IOException, SQLException, ParseException
-    {
-        String outdir = this.ensureDirectory();
-
-        // generate the resource list
-        this.generateResourceList(context);
-
-        // should be generate a resource dump?
-        boolean rd = false;
-        if (ConfigurationManager.getBooleanProperty("resourcesync", "resourcedump.enable"))
-        {
-            this.generateResourceDump(context);
-            rd = true;
-        }
-
-        // generate the latest changelist
-        String clFilename = this.generateLatestChangeList(context);
-
-        // add to the change list archive
-        this.addChangeListToArchive(context, clFilename);
-
-        // update the last modified date in the capability list (and add the
-        // changelistarchive if necessary)
-        this.updateCapabilityList(context);
-    }
-
-    private String ensureDirectory()
-            throws IOException
-    {
-        // make sure our output directory exists
-        String outdir = ConfigurationManager.getProperty("resourcesync", "resourcesync.dir");
-        if (outdir == null)
+        this.context = context;
+        this.resourceDump = ConfigurationManager.getBooleanProperty("resourcesync", "resourcedump.enable");
+        this.outdir = ConfigurationManager.getProperty("resourcesync", "resourcesync.dir");
+        if (this.outdir == null)
         {
             throw new IOException("No configuration for resourcesync.dir");
         }
-        this.ensureDirectory(outdir);
-        return outdir;
+    }
+
+    //////////////////////////////////////////////////////////////////////////////
+    // methods to be used to interact with the generator
+    //////////////////////////////////////////////////////////////////////////////
+
+    public void init()
+            throws IOException, SQLException, ParseException
+    {
+        // make sure that the directory exists, and that it is empty
+        this.ensureResourceSyncDirectory();
+        this.emptyResourceSyncDirectory();
+
+        // generate the description document (which will point to the not-yet-existent capability list)
+        this.generateResourceSyncDescription();
+
+        // generate the resource list
+        this.generateResourceList();
+
+        // should we generate a resource dump?
+        if (this.resourceDump)
+        {
+            this.generateResourceDump();
+        }
+
+        // generate the capability list (with a resource list, without a change list, and maybe with a resource dump)
+        this.generateCapabilityList(true, false, this.resourceDump, false);
+
+        // generate the blank changelist as a placeholder for the next iteration
+        this.generateBlankChangeList();
+    }
+
+    public void update()
+            throws IOException, SQLException, ParseException
+    {
+        // check the directory is there
+        this.ensureResourceSyncDirectory();
+
+        // generate the latest changelist
+        String clFilename = this.generateLatestChangeList();
+
+        // add to the change list archive
+        this.addChangeListToArchive(clFilename);
+
+        // update the last modified date in the capability list (and add the
+        // changelistarchive if necessary)
+        this.updateCapabilityList();
+    }
+
+    public void rebase()
+            throws IOException, SQLException, ParseException
+    {
+        this.ensureResourceSyncDirectory();
+
+        // generate the resource list
+        this.generateResourceList();
+
+        // should be generate a resource dump?
+        if (this.resourceDump)
+        {
+            this.generateResourceDump();
+        }
+
+        // generate the latest changelist
+        String clFilename = this.generateLatestChangeList();
+
+        // add to the change list archive
+        this.addChangeListToArchive(clFilename);
+
+        // update the last modified date in the capability list (and add the
+        // changelistarchive if necessary)
+        this.updateCapabilityList();
+    }
+
+    //////////////////////////////////////////////////////////////////////
+    // file management utility methods
+    //////////////////////////////////////////////////////////////////////
+
+    private void ensureResourceSyncDirectory()
+            throws IOException
+    {
+        // make sure our output directory exists
+        this.ensureDirectory(this.outdir);
     }
 
     private void ensureDirectory(String dir)
@@ -169,6 +179,12 @@ public class ResourceSyncGenerator
         {
             throw new IOException(dir + " exists, but is not a directory");
         }
+    }
+
+    private void emptyResourceSyncDirectory()
+            throws IOException
+    {
+        this.emptyDirectory(this.outdir);
     }
 
     private void emptyDirectory(String outdir)
@@ -188,8 +204,7 @@ public class ResourceSyncGenerator
     private FileOutputStream getFileOutputStream(String filename)
             throws IOException
     {
-        String outdir = ConfigurationManager.getProperty("resourcesync", "resourcesync.dir");
-        String rsdFile = outdir + File.separator + filename;
+        String rsdFile = this.outdir + File.separator + filename;
         FileOutputStream fos = new FileOutputStream(new File(rsdFile));
         return fos;
     }
@@ -197,53 +212,18 @@ public class ResourceSyncGenerator
     private FileInputStream getFileInputStream(String filename)
             throws IOException
     {
-        String outdir = ConfigurationManager.getProperty("resourcesync", "resourcesync.dir");
-        String file = outdir + File.separator + filename;
+        String file = this.outdir + File.separator + filename;
         FileInputStream fis = new FileInputStream(new File(file));
         return fis;
     }
 
-    private void generateResourceSyncDescription(Context context)
-            throws IOException
-    {
-        FileOutputStream fos = this.getFileOutputStream(FileNames.resourceSyncDocument);
-
-        ResourceSyncDescription desc = new ResourceSyncDescription();
-        desc.addCapabilityList(this.um.capabilityList());
-        desc.serialise(fos);
-
-        fos.close();
-    }
-
-    private void generateResourceList(Context context)
-            throws SQLException, IOException
-    {
-        FileOutputStream fos = this.getFileOutputStream(FileNames.resourceList);
-
-        DSpaceResourceList drl = new DSpaceResourceList();
-        drl.generate(context, fos, this.um.capabilityList());
-
-        fos.close();
-    }
-
     private void deleteFile(String filename)
     {
-        String outdir = ConfigurationManager.getProperty("resourcesync", "resourcesync.dir");
-        File old = new File(outdir + File.separator + filename);
+        File old = new File(this.outdir + File.separator + filename);
         if (old.exists())
         {
             old.delete();
         }
-    }
-
-    private void generateResourceDump(Context context)
-            throws IOException, SQLException
-    {
-        this.deleteFile(FileNames.resourceDump);
-        this.deleteFile(FileNames.resourceDumpZip);
-
-        DSpaceResourceDump drd = new DSpaceResourceDump();
-        drd.generate(context, ConfigurationManager.getProperty("resourcesync", "resourcesync.dir"), this.um.resourceSyncDescription());
     }
 
     private String getLastChangeListName()
@@ -251,7 +231,7 @@ public class ResourceSyncGenerator
     {
         String filename = null;
         Date from = new Date(0);
-        File dir = new File(ConfigurationManager.getProperty("resourcesync", "resourcesync.dir"));
+        File dir = new File(this.outdir);
         File[] files = dir.listFiles();
         if (files != null)
         {
@@ -276,7 +256,7 @@ public class ResourceSyncGenerator
             throws ParseException
     {
         Date from = new Date(0);
-        File dir = new File(ConfigurationManager.getProperty("resourcesync", "resourcesync.dir"));
+        File dir = new File(this.outdir);
         File[] files = dir.listFiles();
         if (files != null)
         {
@@ -296,57 +276,37 @@ public class ResourceSyncGenerator
         return from;
     }
 
-    private String generateLatestChangeList(Context context)
-            throws ParseException, IOException, SQLException
+    private boolean fileExists(String filename)
     {
-        // determine the "from" date by looking at existing changelists
-        Date from = this.getLastChangeListDate();
-
-        // the "to" date is now, and we'll also use that in the filename, so get the
-        // string representation
-        Date to = new Date();
-        String tr = sdf.format(to);
-
-        // create the changelist name for the period
-        String filename = FileNames.changeList(tr);
-        FileOutputStream fos = this.getFileOutputStream(filename);
-
-        // generate the changelist for the period
-        DSpaceChangeList dcl = new DSpaceChangeList();
-        dcl.generate(context, fos, from, to, this.um.capabilityList(), this.um.changeListArchive());
-        fos.close();
-
-        return filename;
+        String path = this.outdir + File.separator + filename;
+        File file = new File(path);
+        return file.exists() && file.isFile();
     }
 
-    private void generateBlankChangeList(Context context)
-            throws IOException, SQLException, ParseException
+    ////////////////////////////////////////////////////////////////////
+    // private document generation methods
+    ////////////////////////////////////////////////////////////////////
+
+    private void generateResourceSyncDescription()
+            throws IOException
     {
-        Date to = new Date();
-        String tr = this.sdf.format(to);
+        FileOutputStream fos = this.getFileOutputStream(FileNames.resourceSyncDocument);
 
-        FileOutputStream fos = this.getFileOutputStream(FileNames.changeList(tr));
-
-        // generate the changelist for the period (which is of 0 length)
-        DSpaceChangeList dcl = new DSpaceChangeList();
-        dcl.generate(context, fos, to, to, this.um.capabilityList(), null);
+        ResourceSyncDescription desc = new ResourceSyncDescription();
+        desc.addCapabilityList(this.um.capabilityList());
+        desc.serialise(fos);
 
         fos.close();
     }
 
-    private void updateCapabilityList(Context context)
+    private void updateCapabilityList()
             throws IOException, ParseException
     {
         // just regenerate the capability list in its entirity
-        boolean rd = false;
-        if (ConfigurationManager.getBooleanProperty("resourcesync", "resourcedump.enable"))
-        {
-            rd = true;
-        }
-        this.generateCapabilityList(context, true, true, rd, true);
+        this.generateCapabilityList(true, true, this.resourceDump, true);
     }
 
-    private void generateCapabilityList(Context context, boolean resourceList, boolean changeListArchive, boolean resourceDump, boolean changeList)
+    private void generateCapabilityList(boolean resourceList, boolean changeListArchive, boolean resourceDump, boolean changeList)
             throws IOException, ParseException
     {
         String describedBy = ConfigurationManager.getProperty("resourcesync", "capabilitylist.described-by");
@@ -371,21 +331,70 @@ public class ResourceSyncGenerator
         }
 
         DSpaceCapabilityList dcl = new DSpaceCapabilityList();
-        dcl.generate(context, fos, describedBy, rlUrl, claUrl, rdUrl, rsdUrl, changeListUrl);
+        dcl.generate(this.context, fos, describedBy, rlUrl, claUrl, rdUrl, rsdUrl, changeListUrl);
         fos.close();
     }
 
-
-    private boolean fileExists(String filename)
+    private void generateResourceList()
+            throws SQLException, IOException
     {
-        String outdir = ConfigurationManager.getProperty("resourcesync", "resourcesync.dir");
-        String path = outdir + File.separator + filename;
-        File file = new File(path);
-        return file.exists() && file.isFile();
+        FileOutputStream fos = this.getFileOutputStream(FileNames.resourceList);
+
+        DSpaceResourceList drl = new DSpaceResourceList();
+        drl.generate(this.context, fos, this.um.capabilityList());
+
+        fos.close();
     }
 
+    private void generateResourceDump()
+            throws IOException, SQLException
+    {
+        this.deleteFile(FileNames.resourceDump);
+        this.deleteFile(FileNames.resourceDumpZip);
 
-    private void addChangeListToArchive(Context context, String filename)
+        DSpaceResourceDump drd = new DSpaceResourceDump();
+        drd.generate(this.context, this.outdir, this.um.resourceSyncDescription());
+    }
+
+    private String generateLatestChangeList()
+            throws ParseException, IOException, SQLException
+    {
+        // determine the "from" date by looking at existing changelists
+        Date from = this.getLastChangeListDate();
+
+        // the "to" date is now, and we'll also use that in the filename, so get the
+        // string representation
+        Date to = new Date();
+        String tr = sdf.format(to);
+
+        // create the changelist name for the period
+        String filename = FileNames.changeList(tr);
+        FileOutputStream fos = this.getFileOutputStream(filename);
+
+        // generate the changelist for the period
+        DSpaceChangeList dcl = new DSpaceChangeList();
+        dcl.generate(this.context, fos, from, to, this.um.capabilityList(), this.um.changeListArchive());
+        fos.close();
+
+        return filename;
+    }
+
+    private void generateBlankChangeList()
+            throws IOException, SQLException, ParseException
+    {
+        Date to = new Date();
+        String tr = this.sdf.format(to);
+
+        FileOutputStream fos = this.getFileOutputStream(FileNames.changeList(tr));
+
+        // generate the changelist for the period (which is of 0 length)
+        DSpaceChangeList dcl = new DSpaceChangeList();
+        dcl.generate(this.context, fos, to, to, this.um.capabilityList(), null);
+
+        fos.close();
+    }
+
+    private void addChangeListToArchive(String filename)
             throws IOException, ParseException
     {
         // get the URL of the new changelist
@@ -414,7 +423,7 @@ public class ResourceSyncGenerator
 
             // now serialise the new change lists
             FileOutputStream fos = this.getFileOutputStream(FileNames.changeListArchive);
-            dcla.generate(context, fos, changeLists, this.um.capabilityList(), cla);
+            dcla.generate(this.context, fos, changeLists, this.um.capabilityList(), cla);
             fos.close();
         }
         // if the change list archive does not exist create a new one with
@@ -422,7 +431,7 @@ public class ResourceSyncGenerator
         else
         {
             FileOutputStream fos = this.getFileOutputStream(FileNames.changeListArchive);
-            dcla.generate(context, fos, changeLists, this.um.capabilityList());
+            dcla.generate(this.context, fos, changeLists, this.um.capabilityList());
             fos.close();
         }
     }
