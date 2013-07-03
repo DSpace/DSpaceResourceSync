@@ -7,6 +7,7 @@ import org.dspace.content.Item;
 import org.dspace.core.ConfigurationManager;
 import org.openarchives.resourcesync.ResourceSync;
 import org.openarchives.resourcesync.ResourceSyncDocument;
+import org.openarchives.resourcesync.ResourceSyncLn;
 import org.openarchives.resourcesync.URL;
 
 import java.sql.SQLException;
@@ -97,7 +98,7 @@ public class DSpaceResourceDocument
 
         // set the metadata url
         metadata.setLoc(this.getMetadataUrl(item, format));
-        metadata.addLn(ResourceSync.REL_DESCRIBED_BY, format.getNamespace());
+        metadata.addLn(ResourceSync.REL_PROFILE, format.getNamespace());
 
         // technically this only tells us when the item was last updated, not the metadata
         metadata.setLastModified(item.getLastModified());
@@ -116,6 +117,18 @@ public class DSpaceResourceDocument
         for (Collection collection : collections)
         {
             metadata.addLn(ResourceSync.REL_COLLECTION, this.getCollectionUrl(collection));
+        }
+
+        // now add "alternate" links for all the other metadata formats
+        for (MetadataFormat f : this.mdFormats)
+        {
+            if (f.getNamespace().equals(format.getNamespace()))
+            {
+                // don't do an alternate of the one that is the main record
+                continue;
+            }
+            ResourceSyncLn ln = metadata.addLn(ResourceSync.REL_ALTERNATE, this.getMetadataUrl(item, f));
+            ln.setType(f.getMimetype());
         }
 
         rl.addEntry(metadata);
