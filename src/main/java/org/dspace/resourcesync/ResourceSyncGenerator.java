@@ -292,6 +292,7 @@ public class ResourceSyncGenerator
     {
         FileOutputStream fos = this.getFileOutputStream(FileNames.resourceSyncDocument);
 
+        // no need for a DSpace-specific implementation, it is so simple
         ResourceSyncDescription desc = new ResourceSyncDescription();
         desc.addCapabilityList(this.um.capabilityList());
         desc.serialise(fos);
@@ -309,20 +310,7 @@ public class ResourceSyncGenerator
     private void generateCapabilityList(boolean resourceList, boolean changeListArchive, boolean resourceDump, boolean changeList)
             throws IOException, ParseException
     {
-        String describedBy = ConfigurationManager.getProperty("resourcesync", "capabilitylist.described-by");
-        if ("".equals(describedBy))
-        {
-            describedBy = null;
-        }
-
-        FileOutputStream fos = this.getFileOutputStream(FileNames.capabilityList);
-
-        String rlUrl = resourceList ? this.um.resourceList() : null;
-        String claUrl = changeListArchive ? this.um.changeListArchive() : null;
-        String rdUrl = resourceDump ? this.um.resourceDump() : null;
-        String rsdUrl = this.um.resourceSyncDescription();
-
-        // get the latest change list
+        // get the latest change list if there is one and we want one
         String changeListUrl = null;
         if (changeList)
         {
@@ -330,8 +318,11 @@ public class ResourceSyncGenerator
             changeListUrl = this.um.changeList(clFilename);
         }
 
-        DSpaceCapabilityList dcl = new DSpaceCapabilityList();
-        dcl.generate(this.context, fos, describedBy, rlUrl, claUrl, rdUrl, rsdUrl, changeListUrl);
+        FileOutputStream fos = this.getFileOutputStream(FileNames.capabilityList);
+
+        DSpaceCapabilityList dcl = new DSpaceCapabilityList(this.context, resourceList, changeListArchive, resourceDump, changeList, changeListUrl);
+        dcl.serialise(fos);
+
         fos.close();
     }
 
