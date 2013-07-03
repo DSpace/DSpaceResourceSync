@@ -2,6 +2,7 @@ package org.dspace.resourcesync;
 
 import org.dspace.authorize.AuthorizeException;
 import org.dspace.content.DSpaceObject;
+import org.dspace.content.Item;
 import org.dspace.content.crosswalk.CrosswalkException;
 import org.dspace.content.crosswalk.DisseminationCrosswalk;
 import org.dspace.core.ConfigurationManager;
@@ -86,19 +87,14 @@ public class ResourceSyncServlet extends HttpServlet
                 return;
             }
 
-            // get the dissemination crosswalk for this prefix and get the element for the object
-            DisseminationCrosswalk dc = (DisseminationCrosswalk) PluginManager.getNamedPlugin(DisseminationCrosswalk.class, formatPrefix);
-            Element element = dc.disseminateElement(dso);
-
+            // figure out the mime-type of the thing we are going to serve
             DSpaceResourceDocument drd = new DSpaceResourceDocument(context);
             MetadataFormat mdf = drd.getMetadataFormat(formatPrefix);
             resp.setContentType(mdf.getMimetype());
 
-            // serialise the element out to a string
-            Document doc = new Document(element);
-            XMLOutputter out = new XMLOutputter(Format.getPrettyFormat());
+            // serialise to the wire
             OutputStream os = resp.getOutputStream();
-            out.output(doc, os);
+            MetadataDisseminator.disseminate((Item) dso, formatPrefix, os);
         }
         catch(SQLException e)
         {
