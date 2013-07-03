@@ -4,7 +4,14 @@ import org.dspace.authorize.AuthorizeException;
 import org.dspace.content.Bitstream;
 import org.dspace.content.Collection;
 import org.dspace.content.Item;
+import org.dspace.content.crosswalk.CrosswalkException;
+import org.dspace.content.crosswalk.DisseminationCrosswalk;
 import org.dspace.core.Context;
+import org.dspace.core.PluginManager;
+import org.jdom.Document;
+import org.jdom.Element;
+import org.jdom.output.Format;
+import org.jdom.output.XMLOutputter;
 import org.openarchives.resourcesync.ResourceDump;
 import org.openarchives.resourcesync.ResourceSyncDocument;
 import org.openarchives.resourcesync.URL;
@@ -170,6 +177,48 @@ public class DSpaceResourceDump extends DSpaceResourceDocument
         protected URL addMetadata(Item item, MetadataFormat format, List<Bitstream> describes, List<Collection> collections, ResourceSyncDocument rl)
         {
             URL url = super.addMetadata(item, format, describes, collections, rl);
+            String itempath = item.getHandle().replace("/", "_");
+            String filepath = format.getPrefix();
+            String dumppath = "/resources/" + itempath + "/" + filepath;
+            url.setPath(dumppath);
+
+            // now actually get the metadata export and stick it in the directory
+            try
+            {
+                ZipEntry e = new ZipEntry(File.separator + "resources" + File.separator + itempath + File.separator + filepath);
+                this.zos.putNextEntry(e);
+
+                // get the input and output streams
+                // String path = parent + File.separator + filepath;
+                // FileOutputStream os = new FileOutputStream(new File(path));
+                // get the dissemination crosswalk for this prefix and get the element for the object
+                DisseminationCrosswalk dc = (DisseminationCrosswalk) PluginManager.getNamedPlugin(DisseminationCrosswalk.class, format.getPrefix());
+                Element element = dc.disseminateElement(item);
+
+                // serialise the element out to the zip output stream
+                element.detach();
+                Document doc = new Document(element);
+                XMLOutputter out = new XMLOutputter(Format.getPrettyFormat());
+                out.output(doc, this.zos);
+
+                this.zos.closeEntry();
+            }
+            catch (IOException e)
+            {
+                throw new RuntimeException(e); // FIXME: not so good, probably best to have the method sig support the error
+            }
+            catch (SQLException e)
+            {
+                throw new RuntimeException(e); // FIXME: not so good, probably best to have the method sig support the error
+            }
+            catch (AuthorizeException e)
+            {
+                throw new RuntimeException(e); // FIXME: not so good, probably best to have the method sig support the error
+            }
+            catch (CrosswalkException e)
+            {
+                throw new RuntimeException(e); // FIXME: not so good, probably best to have the method sig support the error
+            }
 
             return url;
         }

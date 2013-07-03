@@ -76,7 +76,7 @@ public class DSpaceResourceDocument
         bs.setLastModified(item.getLastModified()); // last modified date is not available on a bitstream, so we use the item one
         bs.setType(bitstream.getFormat().getMIMEType());
         bs.setLength(bitstream.getSize());
-        bs.addHash(bitstream.getChecksumAlgorithm().toLowerCase(), bitstream.getChecksum()); // FIXME: do we need to base64 encode this?
+        bs.addHash(bitstream.getChecksumAlgorithm().toLowerCase(), bitstream.getChecksum());
 
         for (MetadataFormat format : this.mdFormats)
         {
