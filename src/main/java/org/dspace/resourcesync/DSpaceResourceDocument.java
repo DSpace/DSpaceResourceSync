@@ -5,6 +5,7 @@ import org.dspace.content.Bundle;
 import org.dspace.content.Collection;
 import org.dspace.content.Item;
 import org.dspace.core.ConfigurationManager;
+import org.dspace.core.Context;
 import org.openarchives.resourcesync.ResourceSync;
 import org.openarchives.resourcesync.ResourceSyncDocument;
 import org.openarchives.resourcesync.ResourceSyncLn;
@@ -21,16 +22,21 @@ public class DSpaceResourceDocument
 {
     protected List<String> exposeBundles = null;
     protected List<MetadataFormat> mdFormats = null;
+    protected Context context;
+    protected UrlManager um = new UrlManager();
 
-    public DSpaceResourceDocument()
+    public DSpaceResourceDocument(Context context)
     {
+        this.context = context;
+
         // get all the configuration
         this.exposeBundles = this.getBundlesToExpose();
         this.mdFormats = this.getMetadataFormats();
     }
 
-    public DSpaceResourceDocument(List<String> exposeBundles, List<MetadataFormat> mdFormats)
+    public DSpaceResourceDocument(Context context, List<String> exposeBundles, List<MetadataFormat> mdFormats)
     {
+        this.context = context;
         this.exposeBundles = exposeBundles;
         this.mdFormats = mdFormats;
     }

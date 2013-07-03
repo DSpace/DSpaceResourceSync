@@ -7,35 +7,45 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
 
 public class DSpaceChangeListArchive
 {
-    public void generate(Context context, OutputStream out, Map<String, Date> changeLists, String capabilityList, ChangeListArchive cla)
-            throws IOException
+    private Context context;
+    private Map<String, Date> changeLists  = new HashMap<String, Date>();
+    private ChangeListArchive cla = null;
+    private UrlManager um;
+
+    public DSpaceChangeListArchive(Context context)
     {
-        if (cla == null)
-        {
-            cla = new ChangeListArchive(capabilityList);
-        }
-
-        for (String loc : changeLists.keySet())
-        {
-            cla.addChangeList(loc, changeLists.get(loc));
-        }
-
-        cla.serialise(out);
+        this.context = context;
+        this.um = new UrlManager();
     }
 
-    public void generate(Context context, OutputStream out, Map<String, Date> changeLists, String capabilityList)
-            throws IOException
+    public void addChangeList(String loc, Date date)
     {
-        this.generate(context, out, changeLists, capabilityList, null);
+        this.changeLists.put(loc, date);
     }
 
-    public ChangeListArchive parse(InputStream in)
+    public void readInSource(InputStream in)
     {
-        ChangeListArchive cla = new ChangeListArchive(in);
-        return cla;
+        this.cla = new ChangeListArchive(in);
+    }
+
+    public void serialise(OutputStream out)
+            throws IOException
+    {
+        if (this.cla == null)
+        {
+            this.cla = new ChangeListArchive(this.um.capabilityList());
+        }
+
+        for (String loc : this.changeLists.keySet())
+        {
+            this.cla.addChangeList(loc, this.changeLists.get(loc));
+        }
+
+        this.cla.serialise(out);
     }
 }

@@ -25,24 +25,27 @@ import java.util.Map;
 public class DSpaceChangeList extends DSpaceResourceDocument
 {
     private boolean includeRestricted = false;
+    private Date from;
+    private Date to;
+    private SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
 
-    public DSpaceChangeList()
+    public DSpaceChangeList(Context context, Date from, Date to)
     {
-        super();
+        super(context);
         this.includeRestricted = ConfigurationManager.getBooleanProperty("resourcesync", "changelist.include-restricted");
+        this.from = from;
+        this.to = to;
     }
 
-    public DSpaceChangeList(List<String> exposeBundles, List<MetadataFormat> mdFormats, boolean includeRestricted)
+    public DSpaceChangeList(Context context, List<String> exposeBundles, List<MetadataFormat> mdFormats, boolean includeRestricted)
     {
-        super(exposeBundles, mdFormats);
+        super(context, exposeBundles, mdFormats);
         this.includeRestricted = includeRestricted;
     }
 
-    public void generate(Context context, OutputStream out, Date from, Date to, String capabilityList, String changeListArchive)
+    public void serialise(OutputStream out)
             throws SQLException, ParseException, IOException
     {
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
-
         // explicitly declare our arguments, for readability
         DSpaceObject scope = null;
         String fromDate = from == null ? null : sdf.format(from);
@@ -57,11 +60,8 @@ public class DSpaceChangeList extends DSpaceResourceDocument
         List<HarvestedItemInfo> his = Harvest.harvest(context, scope, fromDate, toDate,
                                             offset, limit, getItems, getCollections, getWithdrawn, getRestricted);
 
-        ChangeList cl = new ChangeList(from, to, capabilityList);
-        if (changeListArchive != null)
-        {
-            cl.inChangeListArchive(changeListArchive);
-        }
+        ChangeList cl = new ChangeList(from, to, this.um.capabilityList());
+
         for (HarvestedItemInfo hi : his)
         {
             Item item = hi.item;

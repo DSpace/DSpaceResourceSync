@@ -10,6 +10,8 @@ public class FileNames
     public static String resourceDump = "resourcedump.xml";
     public static String capabilityList = "capabilitylist.xml";
     public static String changeListArchive = "changelistarchive.xml";
+    public static String resourceDumpManifest = "manifest.xml";
+    public static String dumpResourcesDir = "resources";
 
     public static String changeList(String dateString)
     {

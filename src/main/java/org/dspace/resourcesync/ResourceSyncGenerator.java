@@ -7,7 +7,6 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
 import org.dspace.core.ConfigurationManager;
 import org.dspace.core.Context;
-import org.openarchives.resourcesync.ChangeListArchive;
 import org.openarchives.resourcesync.ResourceSyncDescription;
 
 import java.io.File;
@@ -18,10 +17,7 @@ import java.sql.SQLException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 
-// FIXME: this whole codebase is a total total mess, and needs to be rewritten
 
 public class ResourceSyncGenerator
 {
@@ -331,8 +327,8 @@ public class ResourceSyncGenerator
     {
         FileOutputStream fos = this.getFileOutputStream(FileNames.resourceList);
 
-        DSpaceResourceList drl = new DSpaceResourceList();
-        drl.generate(this.context, fos, this.um.capabilityList());
+        DSpaceResourceList drl = new DSpaceResourceList(this.context);
+        drl.serialise(fos);
 
         fos.close();
     }
@@ -343,8 +339,8 @@ public class ResourceSyncGenerator
         this.deleteFile(FileNames.resourceDump);
         this.deleteFile(FileNames.resourceDumpZip);
 
-        DSpaceResourceDump drd = new DSpaceResourceDump();
-        drd.generate(this.context, this.outdir, this.um.resourceSyncDescription());
+        DSpaceResourceDump drd = new DSpaceResourceDump(this.context);
+        drd.serialise(this.outdir);
     }
 
     private String generateLatestChangeList()
@@ -363,8 +359,8 @@ public class ResourceSyncGenerator
         FileOutputStream fos = this.getFileOutputStream(filename);
 
         // generate the changelist for the period
-        DSpaceChangeList dcl = new DSpaceChangeList();
-        dcl.generate(this.context, fos, from, to, this.um.capabilityList(), this.um.changeListArchive());
+        DSpaceChangeList dcl = new DSpaceChangeList(this.context, from, to);
+        dcl.serialise(fos);
         fos.close();
 
         return filename;
@@ -379,8 +375,8 @@ public class ResourceSyncGenerator
         FileOutputStream fos = this.getFileOutputStream(FileNames.changeList(tr));
 
         // generate the changelist for the period (which is of 0 length)
-        DSpaceChangeList dcl = new DSpaceChangeList();
-        dcl.generate(this.context, fos, to, to, this.um.capabilityList(), null);
+        DSpaceChangeList dcl = new DSpaceChangeList(this.context, to, to);
+        dcl.serialise(fos);
 
         fos.close();
     }
@@ -395,13 +391,8 @@ public class ResourceSyncGenerator
         String dr = FileNames.changeListDate(filename);
         Date date = this.sdf.parse(dr);
 
-        // create a single element map of the changelist and its last modified
-        // date for addition to the change list archive
-        Map<String, Date> changeLists = new HashMap<String, Date>();
-        changeLists.put(loc, date);
-
-        DSpaceChangeListArchive dcla = new DSpaceChangeListArchive();
-        ChangeListArchive cla = null;
+        DSpaceChangeListArchive dcla = new DSpaceChangeListArchive(this.context);
+        dcla.addChangeList(loc, date);
 
         // if the change list archive exists and is a file, we need to
         // read it in as a change list
@@ -409,22 +400,12 @@ public class ResourceSyncGenerator
         {
             // read the ChangeListArchive
             FileInputStream fis = this.getFileInputStream(FileNames.changeListArchive);
-            cla = dcla.parse(fis);
+            dcla.readInSource(fis);
             fis.close();
+        }
 
-            // now serialise the new change lists
-            FileOutputStream fos = this.getFileOutputStream(FileNames.changeListArchive);
-            dcla.generate(this.context, fos, changeLists, this.um.capabilityList(), cla);
-            fos.close();
-        }
-        // if the change list archive does not exist create a new one with
-        // our one new changelist in it
-        else
-        {
-            FileOutputStream fos = this.getFileOutputStream(FileNames.changeListArchive);
-            dcla.generate(this.context, fos, changeLists, this.um.capabilityList());
-            fos.close();
-        }
+        FileOutputStream fos = this.getFileOutputStream(FileNames.changeListArchive);
+        dcla.serialise(fos);
+        fos.close();
     }
-
 }

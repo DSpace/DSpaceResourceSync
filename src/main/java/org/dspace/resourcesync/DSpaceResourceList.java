@@ -20,34 +20,38 @@ public class DSpaceResourceList extends DSpaceResourceDocument
 {
     protected String metadataChangeFreq = null;
     protected String bitstreamChangeFreq = null;
+    protected boolean dump = false;
 
-    public DSpaceResourceList()
+    public DSpaceResourceList(Context context)
     {
-        super();
+        super(context);
         this.metadataChangeFreq = this.getMetadataChangeFreq();
         this.bitstreamChangeFreq = this.getBitstreamChangeFreq();
     }
 
-    public DSpaceResourceList(List<String> exposeBundles, List<MetadataFormat> mdFormats,
-                                String mdChangeFreq, String bitstreamChangeFreq)
+    public DSpaceResourceList(Context context, boolean dump)
     {
-        super(exposeBundles, mdFormats);
+        super(context);
+        this.metadataChangeFreq = this.getMetadataChangeFreq();
+        this.bitstreamChangeFreq = this.getBitstreamChangeFreq();
+        this.dump = dump;
+    }
+
+    public DSpaceResourceList(Context context, List<String> exposeBundles, List<MetadataFormat> mdFormats,
+                                String mdChangeFreq, String bitstreamChangeFreq, boolean dump)
+    {
+        super(context, exposeBundles, mdFormats);
         this.metadataChangeFreq = mdChangeFreq;
         this.bitstreamChangeFreq = bitstreamChangeFreq;
+        this.dump = dump;
     }
 
-    public void generate(Context context, OutputStream out, String capabilityList)
+    public void serialise(OutputStream out)
             throws SQLException, IOException
     {
-        this.generate(context, out, capabilityList, false);
-    }
+        ResourceList rl = new ResourceList(this.um.capabilityList(), this.dump);
 
-    public void generate(Context context, OutputStream out, String capabilityList, boolean dump)
-            throws SQLException, IOException
-    {
-        ResourceList rl = new ResourceList(capabilityList, dump);
-
-        ItemIterator allItems = Item.findAll(context);
+        ItemIterator allItems = Item.findAll(this.context);
 
         while (allItems.hasNext())
         {

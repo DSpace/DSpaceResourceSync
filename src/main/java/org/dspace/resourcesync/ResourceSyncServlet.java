@@ -90,7 +90,7 @@ public class ResourceSyncServlet extends HttpServlet
             DisseminationCrosswalk dc = (DisseminationCrosswalk) PluginManager.getNamedPlugin(DisseminationCrosswalk.class, formatPrefix);
             Element element = dc.disseminateElement(dso);
 
-            DSpaceResourceDocument drd = new DSpaceResourceDocument();
+            DSpaceResourceDocument drd = new DSpaceResourceDocument(context);
             MetadataFormat mdf = drd.getMetadataFormat(formatPrefix);
             resp.setContentType(mdf.getMimetype());
 
