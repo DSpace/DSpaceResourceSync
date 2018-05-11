@@ -14,9 +14,10 @@ import java.io.OutputStream;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-
 /**
  * @author Richard Jones
+ * @author Andrea Bollini (andrea.bollini at 4science.it)
+ * @author Andrea Petrucci (andrea.petrucci at 4science.it)
  *
  */
 public class DSpaceChangeListArchive
@@ -26,8 +27,17 @@ public class DSpaceChangeListArchive
     private ChangeListArchive cla = null;
     private UrlManager um;
 
-    public DSpaceChangeListArchive(Context context)
+    public UrlManager getUm() {
+		return um;
+	}
+
+	public void setUm(UrlManager um) {
+		this.um = um;
+	}
+
+	public DSpaceChangeListArchive(Context context)
     {
+
         this.context = context;
         this.um = new UrlManager();
     }

@@ -5,53 +5,148 @@
  */
 package org.dspace.resourcesync;
 
+import org.apache.commons.lang3.StringUtils;
+import org.apache.log4j.Logger;
 import org.dspace.authorize.AuthorizeException;
 import org.dspace.content.DSpaceObject;
 import org.dspace.content.Item;
 import org.dspace.content.crosswalk.CrosswalkException;
-import org.dspace.content.crosswalk.DisseminationCrosswalk;
 import org.dspace.core.ConfigurationManager;
 import org.dspace.core.Constants;
 import org.dspace.core.Context;
-import org.dspace.core.PluginManager;
 import org.dspace.handle.HandleManager;
-import org.jdom.Document;
-import org.jdom.Element;
-import org.jdom.output.Format;
-import org.jdom.output.XMLOutputter;
-
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.sql.SQLException;
-
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 /**
  * @author Richard Jones
- *
+ * @author Andrea Bollini (andrea.bollini at 4science.it)
+ * @author Andrea Petrucci (andrea.petrucci at 4science.it)
  */
 public class ResourceSyncServlet extends HttpServlet
 {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	private boolean resourcedumpOnTheFly = ConfigurationManager.getBooleanProperty("resourcesync", "resourcedump.onthefly");
+	private boolean changedumpOnTheFly = ConfigurationManager.getBooleanProperty("resourcesync", "changedump.onthefly");
+    private static Logger log = Logger.getLogger(ResourceSyncServlet.class);
+
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException
     {
         resp.setCharacterEncoding("UTF-8");
-
-        // determine which kind of request this is
-        String path = req.getPathInfo();
-        if (path.startsWith("/resource/"))
-        {
-            this.serveMetadata(req, resp);
-        }
-        else
-        {
-            this.serveStatic(req, resp);
+        Context context = null;
+        try {
+        	context = new Context();
+        	// determine which kind of request this is
+        	String path = req.getPathInfo();
+        	if (path.startsWith("/resource/"))
+        	{
+        		this.serveMetadata(req, resp);
+        	}
+        	else if (resourcedumpOnTheFly && path.endsWith("/resourcedump.zip"))
+        	{
+        		List<String> handles = ResourceSyncGenerator.buildHandleForResourceSync(context);
+        		String handle = null;
+        		String regex = "(\\d+\\/\\d+)\\/resourcedump\\.zip";
+        		Pattern pattern = Pattern.compile(regex);
+        		Matcher matcher = pattern.matcher(path);
+        		if (matcher.find())
+        		{
+        			handle = matcher.group(1);
+        		}
+        		if (StringUtils.isNotBlank(handle))
+        		{
+        			if (!handles.contains(handle))
+        			{
+        				resp.sendError(HttpServletResponse.SC_NOT_FOUND);
+        				return;
+        			}
+            		handle = handle.trim();
+	    			UrlManager um = new UrlManager();
+	    			resp.setContentType("application/zip");
+	        		resp.setHeader("Content-Disposition","attachment;filename=\"" +  "resourcedump.zip" + "\"");
+	        		OutputStream servletOutputStream = resp.getOutputStream();
+	        		DSpaceResourceDump drd = new DSpaceResourceDump(context);
+	        		drd.serialise(handle, um,servletOutputStream);
+        		}
+        		else
+        		{
+        			resp.sendError(HttpServletResponse.SC_BAD_REQUEST);
+                    return;
+        		}
+            }
+        	else if (changedumpOnTheFly && path.endsWith("/changedump.zip"))
+        	{
+        		
+        		List<String> handles = ResourceSyncGenerator.buildHandleForResourceSync(context);
+        		String handle = null;
+        		String regex = "(\\d+\\/\\d+)\\/changedump\\.zip";
+        		Pattern pattern = Pattern.compile(regex);
+        		Matcher matcher = pattern.matcher(path);
+        		if (matcher.find())
+        		{
+        			handle = matcher.group(1);
+        		}
+        		if (StringUtils.isNotBlank(handle))
+        		{
+        			if (!handles.contains(handle))
+        			{
+        				resp.sendError(HttpServletResponse.SC_NOT_FOUND);
+        				return;
+        			}
+            		handle = handle.trim();
+	    			resp.setContentType("application/zip");
+	        		resp.setHeader("Content-Disposition","attachment;filename=\"" +  "changedump.zip" + "\"");
+	        		OutputStream servletOutputStream = resp.getOutputStream();
+	        		String date = req.getParameter("from"); 
+	        		regex = "^\\d{4}-\\d{2}-\\d{2}-\\d{6}$";
+	        		pattern = Pattern.compile(regex);
+	        		matcher = pattern.matcher(date);
+	        		if (!matcher.matches())
+	        		{
+	        			resp.sendError(HttpServletResponse.SC_BAD_REQUEST);
+	                    return;
+	        		}
+	        		Date from = ResourceSyncGenerator.sdfChangeList.parse(date);
+	        		List <ResourceSyncEvent> rseList = new ArrayList<ResourceSyncEvent>();
+	        		ResourceSyncGenerator rsg = new ResourceSyncGenerator(context, handles, from);
+	        		rseList = rsg.getChange(handle);
+	        		rsg.generateChangeDump(handle, rseList, servletOutputStream);
+        		}
+        		else
+        		{
+        			resp.sendError(HttpServletResponse.SC_BAD_REQUEST);
+                    return;
+        		}
+        	}
+        	else
+        	{
+        		this.serveStatic(req, resp);
+        	}
+        }catch(Exception e) {
+        	log.error(e.getMessage(),e);
+        }finally {
+        	if (context != null && context.isValid())
+            {
+                context.abort();
+            }
         }
     }
 
@@ -107,11 +202,11 @@ public class ResourceSyncServlet extends HttpServlet
         }
         catch(SQLException e)
         {
-            throw new ServletException(e);
+        	log.error(e.getMessage(),e);
         }
         catch (CrosswalkException e)
         {
-            throw new ServletException(e);
+        	log.error(e.getMessage(),e);
         }
         catch (AuthorizeException e)
         {

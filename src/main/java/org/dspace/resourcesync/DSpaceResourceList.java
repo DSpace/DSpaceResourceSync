@@ -5,11 +5,19 @@
  */
 package org.dspace.resourcesync;
 
+import org.apache.log4j.Logger;
+import org.dspace.browse.BrowseEngine;
+import org.dspace.browse.BrowseException;
+import org.dspace.browse.BrowseIndex;
+import org.dspace.browse.BrowseInfo;
+import org.dspace.browse.BrowserScope;
 import org.dspace.content.Bitstream;
 import org.dspace.content.Collection;
+import org.dspace.content.DSpaceObject;
 import org.dspace.content.Item;
-import org.dspace.content.ItemIterator;
+import org.dspace.content.Site;
 import org.dspace.core.Context;
+import org.dspace.handle.HandleManager;
 import org.openarchives.resourcesync.ResourceList;
 import org.openarchives.resourcesync.ResourceSyncDocument;
 import org.openarchives.resourcesync.URL;
@@ -19,17 +27,17 @@ import java.io.OutputStream;
 import java.sql.SQLException;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
-
 /**
  * @author Richard Jones
- *
+ * @author Andrea Bollini (andrea.bollini at 4science.it)
+ * @author Andrea Petrucci (andrea.petrucci at 4science.it)
  */
 public class DSpaceResourceList extends DSpaceResourceDocument
 {
     protected String metadataChangeFreq = null;
     protected String bitstreamChangeFreq = null;
     protected boolean dump = false;
+    private static Logger log = Logger.getLogger(DSpaceResourceList.class);
 
     public DSpaceResourceList(Context context)
     {
@@ -55,23 +63,65 @@ public class DSpaceResourceList extends DSpaceResourceDocument
         this.dump = dump;
     }
 
-    public void serialise(OutputStream out)
+    //used for resourcedump
+    public void serialise(OutputStream out,String handle,UrlManager um)
             throws SQLException, IOException
     {
-        ResourceList rl = new ResourceList(this.um.capabilityList(), this.dump);
-
-        ItemIterator allItems = Item.findAll(this.context);
-
-        while (allItems.hasNext())
-        {
-            Item item = allItems.next();
-            this.addResources(item, rl);
+    	
+        ResourceList rl = new ResourceList(um.capabilityList(), this.dump);
+        DSpaceObject dSpaceObject = null;
+        if (!handle.equals(Site.getSiteHandle())) {
+        	dSpaceObject = HandleManager.resolveToObject(context, handle);
         }
+        
+        try {
+			BrowseEngine be = new BrowseEngine(context);
+	        BrowserScope bs = new BrowserScope(context);
+	        bs.setBrowseIndex(BrowseIndex.getItemBrowseIndex());
+	        
+	        bs.setResultsPerPage(100);
+	        if (dSpaceObject != null) {
+	        	bs.setBrowseContainer(dSpaceObject);
+	        }
+	        boolean end = false;
+	        int offset = 0;
+	        while (!end) {
+	        	BrowseInfo binfo = be.browse(bs);
+	        	end = binfo.isLast();
+	        	Item[] items = binfo.getItemResults(this.context);
+	        	for (Item it : items)
+	        	{
+	        		this.addResources(it, rl);
+	        	}
+	        	
+	        	offset += binfo.getNextOffset();
+	        	bs.setOffset(offset);
+	        }
+
+		} catch (BrowseException e) {
+			log.error(e.getMessage(),e);				
+		}
 
         rl.setLastModified(new Date());
         rl.serialise(out);
     }
+    //used for changedump
+    public void serialise(OutputStream out,UrlManager um,List<ResourceSyncEvent> rseList)
+            throws SQLException, IOException
+    {
+        ResourceList rl = new ResourceList(null,um.capabilityList(), this.dump,this.dump);
+		for (ResourceSyncEvent rse : rseList) {
+			DSpaceObject dso = DSpaceObject.find(context, rse.getResource_type(), rse.getResource_id());
+			if (dso instanceof Item) {
+				Item i = (Item) dso;
 
+        		this.addResources(i, rl);
+			}
+		}
+        rl.setLastModified(new Date());
+        rl.serialise(out);
+    }
+    
     @Override
     protected URL addBitstream(Bitstream bitstream, Item item, List<Collection> collections, ResourceSyncDocument rl)
     {
@@ -90,4 +140,6 @@ public class DSpaceResourceList extends DSpaceResourceDocument
         }
         return url;
     }
+    
+
 }

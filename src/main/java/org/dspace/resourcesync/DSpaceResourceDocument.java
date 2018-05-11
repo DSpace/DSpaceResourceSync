@@ -29,7 +29,6 @@ import java.util.Map;
  */
 public class DSpaceResourceDocument
 {
-    protected List<String> exposeBundles = null;
     protected List<MetadataFormat> mdFormats = null;
     protected Context context;
     protected UrlManager um = new UrlManager();
@@ -39,14 +38,12 @@ public class DSpaceResourceDocument
         this.context = context;
 
         // get all the configuration
-        this.exposeBundles = this.getBundlesToExpose();
         this.mdFormats = this.getMetadataFormats();
     }
 
     public DSpaceResourceDocument(Context context, List<String> exposeBundles, List<MetadataFormat> mdFormats)
     {
         this.context = context;
-        this.exposeBundles = exposeBundles;
         this.mdFormats = mdFormats;
     }
 
@@ -61,21 +58,24 @@ public class DSpaceResourceDocument
         List<Collection> clist = Arrays.asList(collection);
 
         // add all the relevant bitstreams
-        for (Bundle bundle : item.getBundles())
+        boolean isOnlyMetadata = ConfigurationManager.getBooleanProperty("resourcesync", "resourcedump.onlymetadata");
+        if (!isOnlyMetadata)
         {
-            // only expose resources in permitted bundles
-            if (!exposeBundles.contains(bundle.getName()))
-            {
-                continue;
-            }
+        	for (Bundle bundle : item.getBundles())
+        	{
+        		// only expose resources in permitted bundles
+        		if (!ResourceSyncConfiguration.getBundlesToExpose().contains(bundle.getName()))
+        		{
+        			continue;
+        		}
 
-            for (Bitstream bitstream : bundle.getBitstreams())
-            {
-                this.addBitstream(bitstream, item, clist, rl);
-                exposed.add(bitstream);
-            }
+        		for (Bitstream bitstream : bundle.getBitstreams())
+        		{
+        			this.addBitstream(bitstream, item, clist, rl);
+        			exposed.add(bitstream);
+        		}
+        	}
         }
-
         // add all the relevant metadata formats
         for (MetadataFormat format : this.mdFormats)
         {
@@ -87,7 +87,7 @@ public class DSpaceResourceDocument
     {
         URL bs = new URL();
 
-        bs.setLoc(this.getBitstreamUrl(item, bitstream));
+        bs.setLoc(this.getBitstreamUrl(bitstream));
         bs.setLastModified(item.getLastModified()); // last modified date is not available on a bitstream, so we use the item one
         bs.setType(bitstream.getFormat().getMIMEType());
         bs.setLength(bitstream.getSize());
@@ -107,7 +107,8 @@ public class DSpaceResourceDocument
         return bs;
     }
 
-    protected URL addMetadata(Item item, MetadataFormat format, List<Bitstream> describes, List<Collection> collections, ResourceSyncDocument rl)
+    protected URL addMetadata(Item item, MetadataFormat format, List<Bitstream> describes, List<Collection> collections,
+    			ResourceSyncDocument rl)
     {
         URL metadata = new URL();
 
@@ -126,7 +127,7 @@ public class DSpaceResourceDocument
 
         for (Bitstream bs : describes)
         {
-            metadata.addLn(ResourceSync.REL_DESCRIBES, this.getBitstreamUrl(item, bs));
+            metadata.addLn(ResourceSync.REL_DESCRIBES, this.getBitstreamUrl(bs));
         }
 
         for (Collection collection : collections)
@@ -150,25 +151,6 @@ public class DSpaceResourceDocument
         return metadata;
     }
 
-    protected List<String> getBundlesToExpose()
-    {
-        List<String> exposeBundles = new ArrayList<String>();
-        String cfg = ConfigurationManager.getProperty("resourcesync", "expose-bundles");
-        if (cfg == null || "".equals(cfg))
-        {
-            return exposeBundles;
-        }
-
-        String[] bits = cfg.split(",");
-        for (String bundle : bits)
-        {
-            if (!exposeBundles.contains(bundle))
-            {
-                exposeBundles.add(bundle);
-            }
-        }
-        return exposeBundles;
-    }
 
     protected List<MetadataFormat> getMetadataFormats()
     {
@@ -265,27 +247,16 @@ public class DSpaceResourceDocument
         return url;
     }
 
-    protected String getBitstreamUrl(Item item, Bitstream bitstream)
-    {
-        String handle = item.getHandle();
-        String bsLink = ConfigurationManager.getProperty("dspace.url");
-
-        if (handle != null && !"".equals(handle))
-        {
-            bsLink = bsLink + "/bitstream/" + handle + "/" + bitstream.getSequenceID() + "/" + bitstream.getName();
-        }
-        else
-        {
-            bsLink = bsLink + "/retrieve/" + bitstream.getID() + "/" + bitstream.getName();
-        }
-
-        return bsLink;
-    }
+	protected String getBitstreamUrl(Bitstream bitstream) {
+		String bsLink = ConfigurationManager.getProperty("resourcesync", "base-url");
+		bsLink += "/bitstreams/" + bitstream.getID();
+		return bsLink;
+	}
 
     protected String getCollectionUrl(Collection collection)
     {
         String handle = collection.getHandle();
         String base = ConfigurationManager.getProperty("dspace.url");
-        return base + "/" + handle;
+        return base + "/handle/" + handle;
     }
 }

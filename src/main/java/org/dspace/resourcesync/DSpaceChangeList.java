@@ -11,8 +11,7 @@ import org.dspace.content.DSpaceObject;
 import org.dspace.content.Item;
 import org.dspace.core.ConfigurationManager;
 import org.dspace.core.Context;
-import org.dspace.search.Harvest;
-import org.dspace.search.HarvestedItemInfo;
+import org.dspace.resourcesync.ResourceSyncAuditService.ChangeType;
 import org.openarchives.resourcesync.ChangeList;
 import org.openarchives.resourcesync.ResourceSync;
 import org.openarchives.resourcesync.ResourceSyncDocument;
@@ -23,94 +22,132 @@ import java.io.OutputStream;
 import java.sql.SQLException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
-
 /**
  * @author Richard Jones
+ * @author Andrea Bollini (andrea.bollini at 4science.it)
+ * @author Andrea Petrucci (andrea.petrucci at 4science.it)
  *
  */
-public class DSpaceChangeList extends DSpaceResourceDocument
-{
-    private boolean includeRestricted = false;
-    private Date from;
-    private Date to;
-    private SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+public class DSpaceChangeList extends DSpaceResourceDocument {
+	private boolean includeRestricted = false;
+	private Date from;
+	private Date to;
+	private SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+	public DSpaceChangeList(Context context, Date from, Date to, UrlManager um) {
+		super(context);
+		this.includeRestricted = ConfigurationManager.getBooleanProperty("resourcesync",
+				"changelist.include-restricted");
+		this.from = from;
+		this.to = to;
+		this.um = um;
+	}
 
-    public DSpaceChangeList(Context context, Date from, Date to)
-    {
-        super(context);
-        this.includeRestricted = ConfigurationManager.getBooleanProperty("resourcesync", "changelist.include-restricted");
-        this.from = from;
-        this.to = to;
-    }
+	public DSpaceChangeList(Context context, List<String> exposeBundles, List<MetadataFormat> mdFormats,
+			boolean includeRestricted) {
+		super(context, exposeBundles, mdFormats);
+		this.includeRestricted = includeRestricted;
+	}
 
-    public DSpaceChangeList(Context context, List<String> exposeBundles, List<MetadataFormat> mdFormats, boolean includeRestricted)
-    {
-        super(context, exposeBundles, mdFormats);
-        this.includeRestricted = includeRestricted;
-    }
+	public void serialise(OutputStream out) throws SQLException, ParseException, IOException {
+		// explicitly declare our arguments, for readability
+		
+		ChangeList cl = new ChangeList(from, to, this.um.capabilityList());
+		cl.serialise(out);
 
-    public void serialise(OutputStream out)
-            throws SQLException, ParseException, IOException
-    {
-        // explicitly declare our arguments, for readability
-        DSpaceObject scope = null;
-        String fromDate = from == null ? null : sdf.format(from);
-        String toDate = to == null ? null : sdf.format(to);
-        int offset = 0;
-        int limit = 0;
-        boolean getItems = true;
-        boolean getCollections = false;
-        boolean getWithdrawn = true;
-        boolean getRestricted = this.includeRestricted;
+	}
 
-        List<HarvestedItemInfo> his = Harvest.harvest(context, scope, fromDate, toDate,
-                                            offset, limit, getItems, getCollections, getWithdrawn, getRestricted);
+	public void serialiseForDump(OutputStream out, UrlManager um, List<ResourceSyncEvent> rseList)
+			throws SQLException, IOException
 
-        ChangeList cl = new ChangeList(from, to, this.um.capabilityList());
+	{
 
-        for (HarvestedItemInfo hi : his)
-        {
-            Item item = hi.item;
-            this.addResources(item, cl);
-        }
+		ChangeList cl = new ChangeList(from, to, um.capabilityList());
+		for (ResourceSyncEvent rse : rseList) {
+			if (!rse.getChangetype().toLowerCase().equals(ChangeType.REMOVE.type()))
+			{
+				DSpaceObject dso = DSpaceObject.find(context, rse.getResource_type(), rse.getResource_id());
+				if (dso instanceof Item) {
+					Item i = (Item) dso;
+					cl.setChangeType(rse.getChangetype());
+					this.addResources(i, cl);
+				}
+			}
+			else
+			{
+				if (rse.getResource_type() == 2)
+				{
+					DSpaceResourceDocument dsrd = new DSpaceResourceDocument(context);
+					List <MetadataFormat> mdfList = new ArrayList<MetadataFormat>();
+					mdfList = dsrd.getMetadataFormats();
+					for (MetadataFormat mdf : mdfList)
+					{
+						mdf.getPrefix();
+						cl.setChangeType(rse.getChangetype());
+						this.addResources(rse, cl,mdf.getPrefix());
+					}
+				}
+				else
+				{
+					cl.setChangeType(rse.getChangetype());
+					this.addResources(rse, cl,null);
+				}
+			}
+		}
 
-        cl.serialise(out);
-    }
+		cl.serialise(out);
+	}
 
-    @Override
-    protected URL addBitstream(Bitstream bitstream, Item item, List<Collection> collections, ResourceSyncDocument rl)
-    {
-        URL url = super.addBitstream(bitstream, item, collections, rl);
-        // we can't ever know if an item is created in DSpace, as no such metadata exists
-        // all we can say is that it was updated
-        String change = ResourceSync.CHANGE_UPDATED;
-        if (item.isWithdrawn())
-        {
-            // if the item is withdrawn, we say that the change that happened to it was
-            // that it was deleted
-            change = ResourceSync.CHANGE_DELETED;
-        }
-        url.setChange(change);
-        return url;
-    }
+	 protected URL addResources(ResourceSyncEvent rse, ResourceSyncDocument rl,String format)
+	            throws SQLException
+	    {
+		 	URL bs = new URL();
+		 	String resourceSyncDir = ConfigurationManager.getProperty("resourcesync", "base-url");
+		 	if (rse.getResource_type() == 0)
+		 	{
+		 		bs.setLoc(resourceSyncDir+"/bitstreams/" + rse.getResource_id());
+		 	}
+		 	else
+		 	{
+		 		bs.setLoc(resourceSyncDir+"/"+rse.getHandle()+"/"+format);
 
-    @Override
-    protected URL addMetadata(Item item, MetadataFormat format, List<Bitstream> describes, List<Collection> collections, ResourceSyncDocument rl)
-    {
-        URL url = super.addMetadata(item, format, describes, collections, rl);
-        String change = ResourceSync.CHANGE_UPDATED;
-        if (item.isWithdrawn())
-        {
-            // if the item is withdrawn, we say that the change that happened to it was
-            // that it was deleted
-            change = ResourceSync.CHANGE_DELETED;
-        }
-        url.setChange(change);
-        return url;
-    }
+		 	}
+		 	bs.setChange(ResourceSync.CHANGE_DELETED);
+		 	rl.addEntry(bs);
+		 	return bs;
+	    }
+	@Override
+	protected URL addBitstream(Bitstream bitstream, Item item, List<Collection> collections, ResourceSyncDocument rl) {
+		URL url = super.addBitstream(bitstream, item, collections, rl);
+		// we can't ever know if an item is created in DSpace, as no such metadata
+		// exists
+		// all we can say is that it was updated
+		String change = null;
+		change = rl.getChangeType();
+		if (item.isWithdrawn()) {
+			// if the item is withdrawn, we say that the change that happened to it was
+			// that it was deleted
+			change = ResourceSync.CHANGE_DELETED;
+		}
+		url.setChange(change);
+		return url;
+	}
 
+	@Override
+	protected URL addMetadata(Item item, MetadataFormat format, List<Bitstream> describes, List<Collection> collections,
+			ResourceSyncDocument rl) {
+		URL url = super.addMetadata(item, format, describes, collections, rl);
+		String change = null;
+		change = rl.getChangeType();
+		if (item.isWithdrawn()) {
+			// if the item is withdrawn, we say that the change that happened to it was
+			// that it was deleted
+			change = ResourceSync.CHANGE_DELETED;
+		}
+		url.setChange(change);
+		return url;
+	}
 
 }

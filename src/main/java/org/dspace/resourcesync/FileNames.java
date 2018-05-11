@@ -13,25 +13,36 @@ import java.io.File;
  */
 public class FileNames
 {
-    public static String resourceSyncDocument = "resourcesync.xml";
+    public static String resourceSyncDocument = "sourcedescription.xml";
+    public static String resourceSyncDocumentIndex = "sourcedescriptionindex.xml";
     public static String resourceList = "resourcelist.xml";
     public static String resourceDumpZip = "resourcedump.zip";
     public static String resourceDump = "resourcedump.xml";
     public static String capabilityList = "capabilitylist.xml";
-    public static String changeListArchive = "changelistarchive.xml";
     public static String resourceDumpManifest = "manifest.xml";
+    public static String changeDumpZip = "changedump.zip";
+    public static String changeDumpManifest = "manifest.xml";
+    public static String changeListArchive = "changelistindex.xml";
     public static String dumpResourcesDir = "resources";
-
+    
     public static String changeList(String dateString)
     {
         return "changelist_" + dateString + ".xml";
-    }
 
+    }
+    public static String changeDump(String dateString)
+    {
+        return "changedump_" + dateString + ".zip";
+
+    }
     public static boolean isChangeList(File file)
     {
         return file.getName().startsWith("changelist_");
     }
-
+    public static boolean isChangeDump(File file)
+    {
+        return file.getName().startsWith("changedump_");
+    }
     public static String changeListDate(File file)
     {
         return FileNames.changeListDate(file.getName());
@@ -41,6 +52,18 @@ public class FileNames
     {
         int start = "changelist_".length(); // 11
         int end = filename.length() - ".xml".length();
+        String dr = filename.substring(start, end);
+        return dr;
+    }
+    public static String changeDumpDate(File file)
+    {
+        return FileNames.changeDumpDate(file.getName());
+    }
+
+    public static String changeDumpDate(String filename)
+    {
+        int start = "changedump_".length(); // 11
+        int end = filename.length() - ".zip".length();
         String dr = filename.substring(start, end);
         return dr;
     }

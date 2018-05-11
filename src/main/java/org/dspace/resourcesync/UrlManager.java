@@ -5,6 +5,7 @@
  */
 package org.dspace.resourcesync;
 
+import org.dspace.content.Site;
 import org.dspace.core.ConfigurationManager;
 
 /**
@@ -13,14 +14,22 @@ import org.dspace.core.ConfigurationManager;
  */
 public class UrlManager
 {
-    private String base;
+    private String base;  
 
-    public UrlManager()
+    public UrlManager() {
+    	
+    }
+    public UrlManager(String handle)
     {
         this.base = ConfigurationManager.getProperty("resourcesync", "base-url");
         if (!this.base.endsWith("/"))
         {
             this.base += "/";
+        }
+        if (handle != null && !handle.equals(Site.getSiteHandle()))
+        {
+            String dir = handle.replace("/", "-");
+        	this.base += dir + "/";
         }
     }
 
@@ -53,9 +62,13 @@ public class UrlManager
     {
         return this.base + FileNames.resourceDump;
     }
-
+    
     public String resourceDumpZip()
     {
         return this.base + FileNames.resourceDumpZip;
+    }
+    public String changeDump(String filename)
+    {
+    	return this.base + filename;
     }
 }
