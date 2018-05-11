@@ -1,3 +1,9 @@
+====
+    The contents of this file are subject to the license and copyright
+    detailed in the LICENSE and NOTICE files at the root of the source
+    tree
+====
+
 #ResourceSync for Metadata Harvesting
 
 This repository supports the ResourceSync protocol and the profile of ResourceSync for metadata harvesting.

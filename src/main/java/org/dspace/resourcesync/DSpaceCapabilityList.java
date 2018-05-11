@@ -1,3 +1,8 @@
+/**
+ * The contents of this file are subject to the license and copyright
+ * detailed in the LICENSE and NOTICE files at the root of the source
+ * tree
+ */
 package org.dspace.resourcesync;
 
 import org.dspace.core.ConfigurationManager;
@@ -8,6 +13,10 @@ import org.openarchives.resourcesync.ResourceSync;
 import java.io.IOException;
 import java.io.OutputStream;
 
+/**
+ * @author Richard Jones
+ *
+ */
 public class DSpaceCapabilityList
 {
     private Context context;

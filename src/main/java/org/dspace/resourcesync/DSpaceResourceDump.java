@@ -1,3 +1,8 @@
+/**
+ * The contents of this file are subject to the license and copyright
+ * detailed in the LICENSE and NOTICE files at the root of the source
+ * tree
+ */
 package org.dspace.resourcesync;
 
 import org.dspace.authorize.AuthorizeException;
@@ -29,6 +34,10 @@ import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+/**
+ * @author Richard Jones
+ *
+ */
 public class DSpaceResourceDump extends DSpaceResourceDocument
 {
     protected String metadataChangeFreq = null;

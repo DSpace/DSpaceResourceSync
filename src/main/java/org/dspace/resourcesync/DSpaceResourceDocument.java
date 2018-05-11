@@ -1,3 +1,8 @@
+/**
+ * The contents of this file are subject to the license and copyright
+ * detailed in the LICENSE and NOTICE files at the root of the source
+ * tree
+ */
 package org.dspace.resourcesync;
 
 import org.dspace.content.Bitstream;
@@ -18,6 +23,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * @author Richard Jones
+ *
+ */
 public class DSpaceResourceDocument
 {
     protected List<String> exposeBundles = null;
