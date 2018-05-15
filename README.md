@@ -2,7 +2,7 @@
 
 This module provides ResourceSync capabilities for DSpace, supporting the metadata harvesting use case. It is based on the original work from Richard Jones of CottageLabs. 4Science has used fund from OpenAIRE to update, extend and improve it, see https://www.openaire.eu/openaire-tender-calls-winners
 
-**Please note this is the version for DSpace 5, check these other branches for a version compatible with [DSpace 6](https://github.com/4Science/DSpaceResourceSync/tree/D4CRIS-506-D6) and [DSpace 7](https://github.com/4Science/DSpaceResourceSync/tree/D4CRIS-506-D7)
+**Please note this is the version for DSpace 5, check these other branches for a version compatible with [DSpace 6](https://github.com/4Science/DSpaceResourceSync/tree/D4CRIS-506-D6) and [DSpace 7](https://github.com/4Science/DSpaceResourceSync/tree/D4CRIS-506-D7)**
 
 ## Dependencies
 
