@@ -1,17 +1,17 @@
-#DSpace ResourceSync Module
+# DSpace ResourceSync Module
 
 This module provides ResourceSync capabilities for DSpace, supporting the metadata harvesting use case. It is based on the original work from Richard Jones of CottageLabs. 4Science has used fund from OpenAIRE to update, extend and improve it, see https://www.openaire.eu/openaire-tender-calls-winners
 
 **Please note this is the version for DSpace 5, check these other branches for a version compatible with [DSpace 6](https://github.com/4Science/DSpaceResourceSync/tree/D4CRIS-506-D6) and [DSpace 7](https://github.com/4Science/DSpaceResourceSync/tree/D4CRIS-506-D7)
 
-##Dependencies
+## Dependencies
 
 This module depends on a generic ResourceSync Java library, which you will need to install before you can
 build the code
 
     https://github.com/4Science/ResourceSyncJava
 
-##Installation
+## Installation
 
 The software can be compiled with simply
 
@@ -39,15 +39,15 @@ You can then deploy the dspace-resourcesync webapp in tomcat alongside your DSpa
 
 You must also deploy the resourcesync.cfg file into the DSpace config/modules directory.
 
-##Usage
+## Usage
 
 In order to provide the ResourceSync documents via the webapp, you need to generate the documents.
 
-###Create the initial Resource List
+### Create the initial Resource List
 
     ./dspace dsrun org.dspace.resourcesync.ResourceSyncGenerator -i
 
-###Update the Change Lists periodically
+### Update the Change Lists periodically
 
 This will generate a new Change List every time it is run, and make it available via the Change List Archive.  It is
 best to run this as a cron job, at a frequency suitable to the rate of change of the content in your repository (for
@@ -55,13 +55,13 @@ example, once a week).
 
     ./dspace dsrun org.dspace.resourcesync.ResourceSyncGenerator -u
 
-###Rebase the documents periodically
+### Rebase the documents periodically
 
 This will generate an up-to-date Resource List and a new Change List every time it is run.  It is best to run this as
 a cron job at a longer frequency suitable to the rate of change of the content in your repository (for example, once
 a month)
 
-##Configuration
+## Configuration
 
 Configuration can be found in dspace/config/modules/resourcesync.cfg
 
