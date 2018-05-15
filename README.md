@@ -1,13 +1,15 @@
 #DSpace ResourceSync Module
 
-This module provides ResourceSync capabilities for DSpace, supporting the metadata harvesting use case.
+This module provides ResourceSync capabilities for DSpace, supporting the metadata harvesting use case. It is based on the original work from Richard Jones of CottageLabs. 4Science has used fund from OpenAIRE to update, extend and improve it, see https://www.openaire.eu/openaire-tender-calls-winners
+
+**Please note this is the version for DSpace 5, check these other branches for a version compatible with [DSpace 6](https://github.com/4Science/DSpaceResourceSync/tree/D4CRIS-506-D6) and [DSpace 7](https://github.com/4Science/DSpaceResourceSync/tree/D4CRIS-506-D7)
 
 ##Dependencies
 
 This module depends on a generic ResourceSync Java library, which you will need to install before you can
 build the code
 
-    https://github.com/CottageLabs/ResourceSyncJava
+    https://github.com/4Science/ResourceSyncJava
 
 ##Installation
 
@@ -26,7 +28,7 @@ and then update your dspace pom.xml file to depend on this module, with a depend
     <dependency>
         <groupId>org.dspace</groupId>
         <artifactId>dspace-resourcesync</artifactId>
-        <version>1.0-SNAPSHOT</version>
+        <version>1.1-SNAPSHOT</version>
         <type>jar</type>
         <classifier>classes</classifier>
     </dependency>
