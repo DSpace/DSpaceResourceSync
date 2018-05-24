@@ -1,3 +1,8 @@
+/**
+ * The contents of this file are subject to the license and copyright
+ * detailed in the LICENSE and NOTICE files at the root of the source
+ * tree
+ */
 package org.dspace.resourcesync;
 
 import org.dspace.core.ConfigurationManager;
@@ -8,6 +13,10 @@ import org.openarchives.resourcesync.ResourceSync;
 import java.io.IOException;
 import java.io.OutputStream;
 
+/**
+ * @author Richard Jones
+ *
+ */
 public class DSpaceCapabilityList
 {
     private Context context;
@@ -17,9 +26,12 @@ public class DSpaceCapabilityList
     private boolean changeListArchive;
     private boolean resourceDump;
     private boolean changeList;
+    private boolean changeDump;
     private String latestChangeList;
+    private String latestChangeDump;
 
-    public DSpaceCapabilityList(Context context, boolean resourceList, boolean changeListArchive, boolean resourceDump, boolean changeList, String latestChangeList)
+    public DSpaceCapabilityList(Context context, boolean resourceList, boolean changeListArchive, boolean resourceDump, boolean changeList,
+    		boolean changeDump,String latestChangeList,String latestChangeDump,UrlManager um)
     {
         this.context = context;
         this.describedBy = ConfigurationManager.getProperty("resourcesync", "capabilitylist.described-by");
@@ -27,12 +39,14 @@ public class DSpaceCapabilityList
         {
             this.describedBy = null;
         }
-        this.um = new UrlManager();
+        this.um = um;
         this.resourceList = resourceList;
         this.changeListArchive = changeListArchive;
         this.resourceDump = resourceDump;
         this.changeList = changeList;
         this.latestChangeList = latestChangeList;
+        this.changeDump = changeDump;
+        this.latestChangeDump = latestChangeDump;
     }
 
     public void serialise(OutputStream out)
@@ -58,14 +72,18 @@ public class DSpaceCapabilityList
         }
         if (rsdUrl != null)
         {
-            cl.addLn(ResourceSync.REL_RESOURCESYNC, rsdUrl);
+            cl.addLn(ResourceSync.REL_UP, rsdUrl);
         }
 
         if (this.changeList && this.latestChangeList != null)
         {
             cl.setChangeList(this.latestChangeList);
         }
-
+        if (this.changeDump && this.latestChangeDump != null)
+        {
+            cl.setChangeDump(this.latestChangeDump);
+        }
+       
         cl.serialise(out);
     }
 }

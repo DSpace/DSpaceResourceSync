@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sm:urlset xmlns:sm="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:rs="http://www.openarchives.org/rs/terms/">
+  <rs:md capability="changedump-manifest" from="2018-05-11T16:16:11Z" />
+  <rs:ln rel="up" href="http://petrucci.local.it:8082/dspace-resourcesync/123456789-11/capabilitylist.xml" />
+</sm:urlset>
