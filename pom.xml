@@ -10,7 +10,7 @@
 	<packaging>war</packaging>
 
 	<properties>
-		<dspace.version>5.9-SNAPSHOT</dspace.version>
+		<dspace.version>5.11</dspace.version>
 		<root.basedir>${basedir}</root.basedir>
 	</properties>
 
